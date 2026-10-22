@@ -1,6 +1,6 @@
 # shriii-api: backend API, database and job worker
 
-This package is the FastAPI service, the PostgreSQL 18 schema with its Alembic migrations, and the Postgres-backed job worker. It covers layer 1 (raw events) and stores layers 2 to 5. Indicator formulas and psychometrics are computed by `shriii_scoring` and `shriii_validation`, which this package calls through thin adapters in `src/shriii_api/adapters/`.
+This package is the FastAPI service, the PostgreSQL 18 schema (PostgreSQL 17 compatible; production runs on Supabase, see `docs/deploy/supabase.md`) with its Alembic migrations, and the Postgres-backed job worker. It covers layer 1 (raw events) and stores layers 2 to 5. Indicator formulas and psychometrics are computed by `shriii_scoring` and `shriii_validation`, which this package calls through thin adapters in `src/shriii_api/adapters/`.
 
 ## Run
 
