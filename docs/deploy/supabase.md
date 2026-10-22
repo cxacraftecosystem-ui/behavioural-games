@@ -91,7 +91,8 @@ uv run shriii-api seed        # instruments, dictionary, games, content versions
 The demo study (`demo-s2-pilot`) was seeded with `seed_demo_study`. `seed --demo` does the same and also
 registers a dev kiosk, but only when `ENV` is dev or test, so do not run it with a dev `ENV` against production.
 
-Status on 2026-10-22: research at `0005` (92 tables in 11 schemas, the 9 initial event partitions included, plus `public.alembic_version`), identity at
+Status on 2026-10-22 (later): research at `0007` after the release `68ffab7` deploy, database size 247 MB.
+Earlier status on 2026-10-22: research at `0005` (92 tables in 11 schemas, the 9 initial event partitions included, plus `public.alembic_version`), identity at
 `i0002` (2 tables). The seed added 16 instruments, 17 constructs, 100 indicators, 14 games, 7 content versions
 and the demo study.
 
