@@ -6,12 +6,21 @@
  * wipe). Same wiring as frontend/apps/kiosk/src/App.tsx; dev-only code is behind NODE_ENV checks so it is
  * dropped from production bundles.
  */
-import type { EventValidator, KioskRuntime } from '@shriii/kiosk-game';
+import type { EventValidator, KioskRuntime, KioskRuntimeOptions } from '@shriii/kiosk-game';
 import { KioskRuntimeView } from '@shriii/kiosk-game';
+import { createArtKit } from '@shriii/kiosk-game/art';
+import { AudioEngine } from '@shriii/kiosk-game/audio';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { readKioskConfig } from './kiosk-config';
 
 const isDev = process.env.NODE_ENV !== 'production';
+
+// Same art kit and audio engine as frontend/apps/kiosk; without them the runtime falls back to the flat
+// placeholder scenes.
+const ART_FACTORY: NonNullable<KioskRuntimeOptions['artFactory']> = (app, layout) =>
+  createArtKit({ app, layout });
+const AUDIO_FACTORY: NonNullable<KioskRuntimeOptions['audioFactory']> = (clock) =>
+  new AudioEngine({ clock });
 
 const DevPanel = isDev
   ? lazy(() => import('@shriii/kiosk-game').then((m) => ({ default: m.DevPanel })))
@@ -54,6 +63,8 @@ export default function KioskApp({ entry }: { readonly entry: string }) {
       siteMode: config.siteMode,
       arm: config.arm,
       strictTargets: isDev,
+      artFactory: ART_FACTORY,
+      audioFactory: AUDIO_FACTORY,
       ...(config.pxPerMm ? { pxPerMm: config.pxPerMm } : {}),
       ...(validate ? { validate } : {}),
     }),
