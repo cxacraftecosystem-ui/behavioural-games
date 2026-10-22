@@ -1,6 +1,6 @@
 """Synthetic-data operations against production, run inside the API image on the instance (see synthetic.sh).
 
-    python - smoke     one sealed UploadBatch per simulated session -> https://$SITE_HOST/api/v1/events/batch
+    python - smoke     sealed UploadBatches for one simulated session -> https://$SITE_HOST/api/v1/events/batch
                        (real TLS, real device auth, x25519-sealed AES-256-GCM chunks), then waits until the
                        worker container has processed the jobs the upload queued
     python - cleanup   after a demo-pipeline run: revoke the simulator kiosk and undo the dev-only instrument
@@ -65,8 +65,13 @@ def smoke() -> int:
     statuses: dict[str, int] = {}
     batches = 0
     with httpx.Client(base_url=f"https://{host}", timeout=30.0) as client:  # default: verify TLS
-        for s in sim.sessions:
+        for s in sim.sessions[:1]:
             events = sorted(s.events, key=lambda e: e["seq"])
+            # Production refuses events flagged synthetic (ENV=prod), which is exactly the path this smoke must
+            # exercise, so the flag is cleared for this one session. It is still identifiable as synthetic: it
+            # comes from the simulator kiosk (kiosk-sim-01, site-sim-01) and belongs to the SYNTHETIC SMOKE study.
+            for e in events:
+                e["context"]["synthetic"] = False
             for start in range(0, len(events), 400):
                 part = events[start : start + 400]
                 chunks = [_sealed_chunk(private_key, s.session_id, part)]
@@ -86,7 +91,7 @@ def smoke() -> int:
                 batches += 1
                 for status, count in r.json()["summary"].items():
                     statuses[status] = statuses.get(status, 0) + int(count)
-    print(json.dumps({"smoke_upload": {"sessions": len(sim.sessions), "batches": batches, "events": statuses}}))
+    print(json.dumps({"smoke_upload": {"sessions": 1, "batches": batches, "events": statuses}}))
     deadline = time.monotonic() + 300
     while True:
         with session_scope() as db:

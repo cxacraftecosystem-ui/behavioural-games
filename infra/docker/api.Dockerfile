@@ -69,6 +69,7 @@ ENV PATH=/opt/venv/bin:$PATH \
     SHRIII_REPO_ROOT=/app \
     DATA_DIR=/var/lib/shriii \
     LOG_JSON=true \
+    GIT_SHA=${GIT_SHA} \
     PORT=8000
 
 COPY --from=build /opt/venv /opt/venv
