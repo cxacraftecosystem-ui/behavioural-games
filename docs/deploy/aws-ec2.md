@@ -119,19 +119,46 @@ deploy is a separate, deliberate step (the command above).
 
 ### Synthetic data on production
 
-`synthetic.sh smoke` seals one UploadBatch per simulated session to the backend X25519 key (AES-256-GCM, as a
-real kiosk does), posts it to the public HTTPS endpoint with a device token, and waits for the worker container
-to finish the jobs the upload queued. The data goes into the study `synthetic-smoke` (named "SYNTHETIC SMOKE
-TEST").
+`synthetic.sh smoke` seals the batches of one simulated session to the backend X25519 key (AES-256-GCM, as a
+real kiosk does), posts them to the public HTTPS endpoint with a device token, and waits for the worker
+container to finish the jobs the upload queued. Production refuses events flagged `synthetic` (ENV=prod), which
+is the path this test must exercise, so the smoke clears that flag on its one session. The session stays
+identifiable: it comes from the simulator kiosk `kiosk-sim-01` (site `site-sim-01`, revoked again afterwards)
+and belongs to the study `synthetic-smoke` ("SYNTHETIC SMOKE TEST").
 
-`synthetic.sh demo` runs `shriii-api demo-pipeline --fast` into a study whose id starts with `synthetic-` and
-whose name starts with "SYNTHETIC DEMO", so the research dashboards have data. The pipeline drives the API
+`synthetic.sh demo` runs `shriii-api demo-pipeline` into a study whose id starts with `synthetic-` and whose
+name starts with "SYNTHETIC DEMO", so the research dashboards have data. The default size is the CI size (24
+players per language + 8 retests: about 56 sessions, 68k raw events, 230 MB). **The Supabase project is on the
+free plan, whose 500 MB database cap turns the database read-only when exceeded**; the `--fast` preset (about
+470k events, 1.4 GB) did exactly that on 2026-10-22 and the synthetic raw data had to be truncated. Run larger
+demos only after moving to a paid plan, and watch the size (`select pg_size_pretty(pg_database_size('postgres'))`)
+before real data collection: raw events cost about 3 KB each including indexes. The pipeline drives the API
 in-process, so it runs in a one-off container with `ENV=dev`/`AUTH_MODE=dev` and a throwaway dev secret; the
 public API stays `ENV=prod`. The worker is paused during the run. Afterwards the cleanup step revokes the
 simulator kiosk (`kiosk-sim-01`) and undoes the dev-only instrument approvals the pipeline records (synthetic
 "granted" permissions and dev-approved language versions), so no instrument looks licensed for real use. The
 synthetic chunks are stored as `none_dev` plaintext: they are simulated players, not participants. Remove a
 synthetic study through the normal erasure/retention paths, or leave it as a labelled demo.
+
+### Database network access
+
+Supabase network restrictions allow the database (direct and pooler) only from the Elastic IP `52.66.109.32/32`
+and the operator IP `49.47.131.192/32`; IPv6 is closed. Change them with
+`supabase network-restrictions update --project-ref qcxfjelfjqdvxcjeitiv --db-allow-cidr <cidr> ... --experimental`
+(the list is replaced, so pass every CIDR). Running migrations or `bootstrap_roles.py` from another machine
+needs its IP added first.
+
+## Verification (2026-10-22)
+
+| Check | Result |
+|---|---|
+| `https://52-66-109-32.sslip.io/healthz`, `/readyz` | 200; `{"database":"ok","identity_database":"ok","migration":"0006"}`; Let's Encrypt certificate (issuer YE2) verifies; HTTP redirects with 308 |
+| Headers | HSTS, CSP, X-Frame-Options, nosniff, Referrer-Policy present; `Server` removed |
+| Auth | `POST /api/v1/auth/dev-login` 404; `admin` created over SSM and signs in via `/api/v1/auth/login`; wrong password 401 |
+| CORS | a `behavioural-games-*.vercel.app` origin is allowed; an unrelated origin is refused |
+| Migrations on Supabase | research `0006`, identity `i0002` (head) |
+| Sealed UploadBatch over HTTPS | 1,190 events accepted, visible in `kiosk_raw.events` on Supabase; the worker container ran `trial_eligibility` and `feature_extraction` (both succeeded) |
+| Demo pipeline (`synthetic-demo-20261022`) | 48 synthetic participants, 56 sessions, 68,250 events accepted; every hard check passed (events accepted, no failed job, analyses succeeded, model trained with holdout, gates and report fail closed); soft check `planted_dif_recovered` not met at this sample size, as expected; cleanup revoked `kiosk-sim-01` and restored 11 instrument permissions and 30 language versions |
 
 ## Rotating secrets
 
