@@ -7,6 +7,8 @@ import { chromium } from '@playwright/test';
 
 const BASE = process.env.BASE_URL ?? 'https://behavioural-games.vercel.app';
 const USER = 'smoke-test@shriii.local';
+/** The EC2 API host; the browser must never contact it directly (Vercel proxies /api/v1). */
+const EC2_HOSTS = new Set(['52-66-109-32.sslip.io', '52.66.109.32']);
 const PASSWORD = process.env.SMOKE_PASSWORD;
 const OUT = process.env.OUT_DIR;
 if (!PASSWORD || !OUT) throw new Error('SMOKE_PASSWORD and OUT_DIR are required');
@@ -27,8 +29,7 @@ try {
   page.on('request', (req) => {
     const u = new URL(req.url());
     if (u.pathname.startsWith('/api/v1')) apiCalls.push({ method: req.method(), url: req.url() });
-    if (u.hostname.includes('sslip.io') || u.hostname.includes('52.66.109.32'))
-      foreignHosts.add(u.hostname);
+    if (EC2_HOSTS.has(u.hostname)) foreignHosts.add(u.hostname);
   });
   const apiResponses = [];
   page.on('response', async (res) => {
@@ -178,7 +179,7 @@ try {
     if (
       u.pathname.includes('/api/') ||
       u.pathname.includes('events/batch') ||
-      u.hostname.includes('sslip.io')
+      EC2_HOSTS.has(u.hostname)
     ) {
       kioskApi.push(`${req.method()} ${req.url()}`);
     }
