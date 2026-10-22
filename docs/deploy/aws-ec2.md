@@ -2,7 +2,8 @@
 
 The API and the job worker run as containers on one EC2 instance in `ap-south-1` (Mumbai), behind Caddy,
 which terminates TLS with an automatic Let's Encrypt certificate. The databases are on Supabase in the same
-region ([supabase.md](supabase.md)). Images are built by GitHub Actions and pulled from GHCR. Every secret
+region ([supabase.md](supabase.md)). Images are built by GitHub Actions, pushed to GHCR and mirrored to ECR; the
+instance pulls from ECR with its instance role. Every secret
 lives in AWS SSM Parameter Store; none is in this repository, in an image, or in user data.
 
 ```
@@ -21,9 +22,10 @@ EC2 instance role ──▶ SSM /shriii/prod/* (SecureString, aws/ssm KMS key) �
 | Instance | `i-0fb9646b9ad18744b`, `shriii-backend`, t3.medium, Ubuntu 24.04 LTS, 30 GB gp3 (encrypted), IMDSv2 only |
 | Elastic IP | `52.66.109.32` (hostname `52-66-109-32.sslip.io` via sslip.io wildcard DNS) |
 | Security group | `shriii-backend`: 80/443 TCP and 443 UDP from `0.0.0.0/0` and `::/0`; 22 from the operator IP only |
-| IAM | role and instance profile `shriii-backend-ec2`: `ssm:GetParameter(s)`/`GetParametersByPath` on `/shriii/prod/*`, `kms:Decrypt` on the `aws/ssm` key via SSM only, `AmazonSSMManagedInstanceCore` |
+| IAM | role and instance profile `shriii-backend-ec2`: `ssm:GetParameter(s)`/`GetParametersByPath` on `/shriii/prod/*`, `kms:Decrypt` on the `aws/ssm` key via SSM only, `AmazonSSMManagedInstanceCore`, ECR pull on the two backend repositories |
 | Key pair | `shriii-backend` (ed25519); private key only on the operator machine at `~/.ssh/shriii-backend.pem` |
-| Images | `ghcr.io/cxacraftecosystem-ui/behavioural-games-api` and `-worker`, tags `<commit sha>` and `latest` |
+| Images | `ghcr.io/cxacraftecosystem-ui/behavioural-games-api` and `-worker` (private until made public in the GitHub UI), mirrored to `626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii/behavioural-games-api` and `-worker`; tags `<commit sha>` and `latest` |
+| CI to AWS | GitHub OIDC provider + role `shriii-gha-ecr-push` (trusts only `refs/heads/main` of this repository; push to the two ECR repositories only). No AWS keys in GitHub. |
 | Files on the host | `/opt/shriii/src` (shallow checkout; only `infra/ec2` is used), `/etc/shriii/deploy.env` (`SITE_HOST`, `IMAGE_TAG`), `/etc/shriii/api.env` (secrets, root 0600) |
 | Tags | every AWS resource carries `Project=shriii-kiosk-games` |
 
@@ -97,7 +99,7 @@ run() {   # run one shell command on the instance as root and print its output
 | Task | Command |
 |---|---|
 | Deploy the newest images | `run "/opt/shriii/src/infra/ec2/deploy.sh latest main"` |
-| Roll back | `run "/opt/shriii/src/infra/ec2/deploy.sh <older full commit sha> main"` (each image tag is a commit sha; see the Images workflow summary or `gh api /users/cxacraftecosystem-ui/packages/container/behavioural-games-api/versions`) |
+| Roll back | `run "/opt/shriii/src/infra/ec2/deploy.sh <older full commit sha> main"` (each image tag is a commit sha; see the Images workflow summary or `aws ecr describe-images --repository-name shriii/behavioural-games-api`) |
 | Status / logs | `run "cd /opt/shriii/src/infra/ec2 && docker compose --env-file /etc/shriii/deploy.env -f docker-compose.prod.yml ps"`, then `... logs --tail 100 api` |
 | Create the first admin | `run "/opt/shriii/src/infra/ec2/create-admin.sh admin"`; read the password with `aws ssm get-parameter --name /shriii/prod/admin_initial_password --with-decryption`, sign in, change it, then delete that parameter |
 | Reset a staff password | put a new value in `/shriii/prod/admin_initial_password`, then `run "/opt/shriii/src/infra/ec2/create-admin.sh <username> --reset"` |
@@ -150,14 +152,17 @@ deploy, which re-renders `/etc/shriii/api.env`.
 ```bash
 infra/ec2/init-secrets.sh                                   # creates missing app secrets only
 OPERATOR_CIDR=<your ip>/32 infra/ec2/provision.sh main      # IAM, SG, key pair, EIP, instance (idempotent)
+infra/ec2/provision-ecr.sh                                  # ECR mirror, GitHub OIDC push role, instance pull policy
 # user data installs Docker, compose, the AWS CLI and the checkout, and deploys if images exist; otherwise:
 run "/opt/shriii/src/infra/ec2/deploy.sh latest main"
 run "/opt/shriii/src/infra/ec2/create-admin.sh admin"
 ```
 
-The GHCR packages must be public so the instance can pull without credentials (package settings, Change
-visibility). If they are made private, store a `read:packages` token in SSM and add a `docker login ghcr.io`
-step to `deploy.sh`.
+`infra/ec2/provision-ecr.sh` creates the ECR repositories, the GitHub OIDC provider, the push role and the
+instance role's pull policy. GHCR packages under a personal account start private, and their visibility can only
+be changed in the GitHub UI (package settings, Change visibility), which is why the instance pulls from ECR. To
+pull from GHCR instead once the packages are public, add `IMAGE_REGISTRY=ghcr.io/cxacraftecosystem-ui` to
+`/etc/shriii/deploy.env`.
 
 ## Costs (ap-south-1, on-demand, approximate)
 
@@ -168,7 +173,8 @@ step to `deploy.sh`.
 | Elastic IP / public IPv4 | about $3.6 |
 | Data out | first 100 GB/month free, then about $0.11/GB |
 | SSM standard parameters, Run Command, Session Manager | free |
-| GHCR (public packages), sslip.io, Let's Encrypt | free |
+| ECR storage (two repositories, newest 30 images each, about 0.4 GB per image) | about $1-3 |
+| GHCR, sslip.io, Let's Encrypt | free |
 | **AWS total** | **about $40/month** before data transfer; Supabase is billed separately |
 
 A 1-year Savings Plan cuts the instance cost by about 35 %. A t3.small (2 GiB) is enough for the API alone but
@@ -190,7 +196,13 @@ aws iam remove-role-from-instance-profile --instance-profile-name shriii-backend
 aws iam delete-instance-profile --instance-profile-name shriii-backend-ec2
 aws iam delete-role-policy --role-name shriii-backend-ec2 --policy-name shriii-prod-ssm-read
 aws iam detach-role-policy --role-name shriii-backend-ec2 --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+aws iam delete-role-policy --role-name shriii-backend-ec2 --policy-name shriii-ecr-pull
 aws iam delete-role --role-name shriii-backend-ec2
+aws iam delete-role-policy --role-name shriii-gha-ecr-push --policy-name shriii-ecr-push
+aws iam delete-role --role-name shriii-gha-ecr-push
+for r in api worker; do aws ecr delete-repository --repository-name shriii/behavioural-games-$r --force; done
+# The GitHub OIDC provider may be shared with other projects; delete only if nothing else uses it:
+# aws iam delete-open-id-connect-provider --open-id-connect-provider-arn arn:aws:iam::626159998512:oidc-provider/token.actions.githubusercontent.com
 # Only when the whole deployment is retired (destroys the keys the data depends on):
 # aws ssm delete-parameters --names $(aws ssm get-parameters-by-path --path /shriii/prod/ --query 'Parameters[].Name' --output text)
 ```

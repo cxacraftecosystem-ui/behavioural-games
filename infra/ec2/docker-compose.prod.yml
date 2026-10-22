@@ -4,7 +4,8 @@
 #
 # Run only through infra/ec2/deploy.sh, which renders the two env files first:
 #   /etc/shriii/api.env     secrets from SSM /shriii/prod/* (root-only, 0600, never in git or images)
-#   /etc/shriii/deploy.env  SITE_HOST, IMAGE_TAG (non-secret)
+#   /etc/shriii/deploy.env  SITE_HOST, IMAGE_TAG, optional IMAGE_REGISTRY (non-secret; default: the ECR mirror,
+#                           ghcr.io/cxacraftecosystem-ui once the GHCR packages are public)
 #
 #   docker compose --env-file /etc/shriii/deploy.env -f infra/ec2/docker-compose.prod.yml up -d
 name: shriii
@@ -34,7 +35,7 @@ x-backend: &backend
 services:
   api:
     <<: *backend
-    image: ghcr.io/cxacraftecosystem-ui/behavioural-games-api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii}/behavioural-games-api:${IMAGE_TAG:-latest}
     environment:
       DB_POOL_SIZE: "4"
     expose:
@@ -43,7 +44,7 @@ services:
 
   worker:
     <<: *backend
-    image: ghcr.io/cxacraftecosystem-ui/behavioural-games-worker:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii}/behavioural-games-worker:${IMAGE_TAG:-latest}
     environment:
       DB_POOL_SIZE: "3"
     mem_limit: 1536m
@@ -52,7 +53,7 @@ services:
   # commands in docs/deploy/aws-ec2.md (create-staff-user, demo seeding).
   migrate:
     <<: *backend
-    image: ghcr.io/cxacraftecosystem-ui/behavioural-games-api:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii}/behavioural-games-api:${IMAGE_TAG:-latest}
     restart: "no"
     profiles: ["ops"]
     environment:

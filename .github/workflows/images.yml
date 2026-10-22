@@ -3,8 +3,13 @@
 #   ghcr.io/cxacraftecosystem-ui/behavioural-games-api:<sha>|latest     (infra/docker/api.Dockerfile, target api)
 #   ghcr.io/cxacraftecosystem-ui/behavioural-games-worker:<sha>|latest  (infra/docker/api.Dockerfile, target worker)
 #
-# Built on every push to main and on demand. Pull requests build without pushing (the CI compose job
-# already builds the same Dockerfile). Only GITHUB_TOKEN is used (packages: write).
+# and mirrored to ECR (the EC2 instance pulls from there with its instance role, because GHCR packages under a
+# personal account start private):
+#   626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii/behavioural-games-{api,worker}:<sha>|latest
+#
+# Built on every push to main and on demand. GHCR uses GITHUB_TOKEN (packages: write); ECR uses GitHub OIDC
+# into the role shriii-gha-ecr-push, which trusts only refs/heads/main of this repository
+# (infra/ec2/provision-ecr.sh). No long-lived credentials.
 name: Images
 
 on:
@@ -32,6 +37,9 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/cxacraftecosystem-ui/behavioural-games
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 626159998512.dkr.ecr.ap-south-1.amazonaws.com
+  ECR_PUSH_ROLE: arn:aws:iam::626159998512:role/shriii-gha-ecr-push
 
 jobs:
   build:
@@ -41,6 +49,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write # AWS OIDC (ECR push)
     strategy:
       fail-fast: false
       matrix:
@@ -53,10 +62,19 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          role-to-assume: ${{ env.ECR_PUSH_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        if: github.ref == 'refs/heads/main'
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
+          images: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
+            name=${{ env.ECR_REGISTRY }}/shriii/behavioural-games-${{ matrix.image }},enable=${{ github.ref == 'refs/heads/main' }}
           tags: |
             type=sha,format=long,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
