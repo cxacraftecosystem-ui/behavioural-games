@@ -137,8 +137,10 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
 
 - **Timing on real kiosk hardware is unverified.** No SKU is certified (ENG-02). The CI kiosk -> API -> scoring
   job builds with the test-only `ci-headless-test` profile (E2E bridge builds only; refused by the API outside
-  ENV=dev/test; sessions graded `caution`, never reportable) and asserts real values for Don't-Tap indicators. Under heavy CPU load modules overran
-  their hard caps in wall time (Don't-Tap ran 173 s against a 108 s cap), so cap enforcement must be checked on kiosk hardware.
+  ENV=dev/test; sessions graded `caution`, never reportable) and asserts real values for Don't-Tap `premature_taps` and `extra_taps`. On those GPU-less runners every module
+  still ends on its hard cap in wall time (Don't-Tap at 108 s), so `response_consistency.rt_rvi`, which needs a
+  completed Don't-Tap, has no value there and is not asserted. Under heavy CPU load modules overran their hard caps
+  (Don't-Tap ran 173 s against a 108 s cap), so cap enforcement must be checked on kiosk hardware.
 - **Native-speaker recordings pending.** No recorded voice manifest is bundled; the kiosk runs the silent voice.
   Weighing Post lines, the form-specific new-rule line and the optional Road Home hint lines are still missing from `content/i18n/lines.yaml`.
 - **Translations are machine drafts pending native review.** hi-IN, mr-IN and ta-IN are LLM-assisted drafts
