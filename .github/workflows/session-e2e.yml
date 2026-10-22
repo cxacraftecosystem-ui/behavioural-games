@@ -143,7 +143,7 @@ jobs:
       - name: Play a session that uploads to the API
         run: |
           node frontend/apps/kiosk/e2e/full-session.mjs --url http://127.0.0.1:4180 --pathway B \
-            --seed 23 --out e2e-artifacts/kiosk-api --cap-s 900 --api --partial-play
+            --seed 23 --out e2e-artifacts/kiosk-api --cap-s 900 --api --partial-play --in-page-taps
       - name: Run the job worker (validation, eligibility, feature extraction)
         run: uv run shriii-api worker --once
       # Required values: Don't-Tap indicators that partial play still yields. response_consistency.rt_rvi needs a

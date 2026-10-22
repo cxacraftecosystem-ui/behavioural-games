@@ -16,7 +16,13 @@
 // Usage:
 //   node frontend/apps/kiosk/e2e/full-session.mjs --url http://127.0.0.1:4173 --pathway A \
 //     [--out e2e-artifacts/pathway-a] [--size 1280x720] [--seed 7] [--cap-s 900] [--api] [--partial-play]
+//     [--in-page-taps]
 // --api additionally waits until the outbox has uploaded everything (kiosk built with VITE_API_BASE).
+// --in-page-taps injects game taps through the bridge's input service (k.input.inject) from inside the
+// page, after the stimulus frame and a human-like delay. On GPU-less runners the main thread is blocked
+// for seconds per frame and CDP pointer events are stamped when it gets to them (right after the onset
+// frame), so mouse taps get 5-20 ms latencies that scoring rightly flags as careless_fast_runs. Use it
+// where indicator values are asserted; latencies are then bot delays, never a timing measurement.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from '@playwright/test';
@@ -37,6 +43,7 @@ const capS = Number(arg('cap-s', 900));
 const waitUpload = arg('api', false) === true;
 const verbose = arg('verbose', false) === true;
 const partialPlay = arg('partial-play', false) === true;
+const inPageTaps = arg('in-page-taps', false) === true;
 let seed = Number(arg('seed', 7)) >>> 0 || 7;
 const rand = () => {
   // mulberry32: reproducible bot choices
@@ -135,6 +142,40 @@ async function tap(x, y, holdMs) {
   await page.mouse.up();
 }
 
+/**
+ * --in-page-taps: inside the page, wait for two rendered frames (input targets are enabled before the
+ * frame that stamps stimulus_onset commits), then the delay, then inject down/up through the input
+ * service with performance.now() timestamps.
+ */
+async function injectTap(x, y, delayMs, holdMs) {
+  await page
+    .evaluate(
+      async ([px, py, delay, hold]) => {
+        const input = globalThis.__shriiiKiosk.input;
+        const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        const sample = (kind) => ({
+          kind,
+          pointerId: 1,
+          clientX: px,
+          clientY: py,
+          timeStamp: performance.now(),
+          pointerType: 'touch',
+          width: 0,
+          height: 0,
+        });
+        await frame();
+        await frame();
+        await sleep(delay);
+        input.inject(sample('down'));
+        await sleep(hold);
+        input.inject(sample('up'));
+      },
+      [x, y, delayMs, holdMs],
+    )
+    .catch((err) => console.log(`  in-page tap failed: ${err.message}`));
+}
+
 /** Keep clear of the persistent exit control (top-right). */
 const nearExit = (x, y) => x > W - 140 && y < 140;
 
@@ -216,16 +257,14 @@ for (;;) {
     continue;
   }
   const hold = t.kind === 'hold' ? 1500 + rand() * 3000 : rand() < 0.08 ? 900 : 60;
-  // Input targets are registered before the frame that shows them commits (stimulus_onset is stamped
-  // in that requestAnimationFrame). On slow software GL that commit can lag by seconds, so wait for two
-  // rendered frames first: the human-like delay then starts at the onset, and latencies stay plausible
-  // (>= 250 ms) instead of a few ms, which scoring rightly flags as careless_fast_runs.
-  await page
-    .evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
-    .catch(() => undefined);
-  await page.waitForTimeout(250 + rand() * 600);
+  const delayMs = 150 + rand() * 700;
   if (verbose)
     console.log(`  tap ${t.id} @${Math.round(x)},${Math.round(y)} hold ${Math.round(hold)}`);
+  if (inPageTaps) {
+    await injectTap(x, y, delayMs + 100, hold);
+    continue;
+  }
+  await page.waitForTimeout(delayMs);
   await tap(x, y, hold);
 }
 
