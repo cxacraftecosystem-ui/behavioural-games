@@ -137,7 +137,9 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
 
 - **Timing on real kiosk hardware is unverified.** No SKU is certified (ENG-02). The CI kiosk -> API -> scoring
   job builds with the test-only `ci-headless-test` profile (E2E bridge builds only; refused by the API outside
-  ENV=dev/test; sessions graded `caution`, never reportable) and asserts real values for Don't-Tap `premature_taps` and `extra_taps`. On those GPU-less runners every module
+  ENV=dev/test; sessions graded `caution`, never reportable) and asserts real values for Don't-Tap `premature_taps` and `extra_taps` (the bot injects its taps in-page there,
+  because CDP pointer events on a blocked main thread get 5-20 ms latencies; a warm-up L1 fallback, which excludes
+  them by rule, is accepted with a warning). On those GPU-less runners every module
   still ends on its hard cap in wall time (Don't-Tap at 108 s), so `response_consistency.rt_rvi`, which needs a
   completed Don't-Tap, has no value there and is not asserted. Under heavy CPU load modules overran their hard caps
   (Don't-Tap ran 173 s against a 108 s cap), so cap enforcement must be checked on kiosk hardware.

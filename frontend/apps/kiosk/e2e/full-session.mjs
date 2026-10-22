@@ -143,7 +143,7 @@ async function tap(x, y, holdMs) {
 }
 
 /**
- * --in-page-taps: inside the page, wait for two rendered frames (input targets are enabled before the
+ * --in-page-taps: inside the page, wait for the next rendered frame (input targets are enabled before the
  * frame that stamps stimulus_onset commits), then the delay, then inject down/up through the input
  * service with performance.now() timestamps.
  */
@@ -164,7 +164,7 @@ async function injectTap(x, y, delayMs, holdMs) {
           width: 0,
           height: 0,
         });
-        await frame();
+        // stimulus_onset resolves in the first frame after render(); callbacks queued now run in it too.
         await frame();
         await sleep(delay);
         input.inject(sample('down'));

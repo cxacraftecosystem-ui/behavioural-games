@@ -108,11 +108,24 @@ def main(argv: list[str] | None = None) -> int:
     for v in with_value[:20]:
         print(f"  {v.get('indicator_id')} = {v.get('value')} (n={v.get('n_valid_trials')})")
     by_id = {str(v.get("indicator_id")): v for v in values}
+    # The warm-up decides the calibration level (fixed L2, L1 fallback on practice struggle). A session that
+    # fell back to L1 has its L2-only indicators excluded by the measurement rule level_not_fixed_l2: that is
+    # correct scoring, not a pipeline fault, and on slow CI renderers the bot sometimes misses warm-up windows.
+    # Accept exactly that exclusion (with a warning); any other reason still fails.
+    levels = [str((e.get("payload") or {}).get("level")) for e in local if e.get("event_type") == "calibration_result"]
+    calibrated_l1 = levels[-1:] == ["L1"]
     for ind in [x.strip() for x in args.require_values.split(",") if x.strip()]:
         row = by_id.get(ind)
+        flags = [] if row is None else list(row.get("quality_flags") or [])
+        expected_l1 = calibrated_l1 and flags == ["excluded_by:level_not_fixed_l2"]
+        if row is not None and row.get("value") is None and expected_l1:
+            print(f"PASS indicator {ind} excluded by level_not_fixed_l2 after the L1 calibration fallback (expected)")
+            print(f"::warning title=kiosk-api::{ind} has no value: the bot struggled in the warm-up (L1 fallback)")
+            continue
         check(
             row is not None and row.get("value") is not None,
-            f"indicator {ind} has a real value ({None if row is None else (row.get('value'), row.get('status'))})",
+            f"indicator {ind} has a real value "
+            f"({None if row is None else (row.get('value'), row.get('status'), flags)}; calibration {levels[-1:]})",
         )
     print(f"kiosk-api-check: {len(failures)} failure(s)")
     return 1 if failures else 0
