@@ -216,7 +216,14 @@ for (;;) {
     continue;
   }
   const hold = t.kind === 'hold' ? 1500 + rand() * 3000 : rand() < 0.08 ? 900 : 60;
-  await page.waitForTimeout(150 + rand() * 700);
+  // Input targets are registered before the frame that shows them commits (stimulus_onset is stamped
+  // in that requestAnimationFrame). On slow software GL that commit can lag by seconds, so wait for two
+  // rendered frames first: the human-like delay then starts at the onset, and latencies stay plausible
+  // (>= 250 ms) instead of a few ms, which scoring rightly flags as careless_fast_runs.
+  await page
+    .evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+    .catch(() => undefined);
+  await page.waitForTimeout(250 + rand() * 600);
   if (verbose)
     console.log(`  tap ${t.id} @${Math.round(x)},${Math.round(y)} hold ${Math.round(hold)}`);
   await tap(x, y, hold);
