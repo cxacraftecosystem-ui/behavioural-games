@@ -167,8 +167,9 @@ synthetic study through the normal erasure/retention paths, or leave it as a lab
 
 `smoke-test@shriii.local` is a service account for the live end-to-end check (role `researcher`, study scope
 limited to the synthetic demo study, so it cannot see any other study). Its password is generated on the operator
-machine, stored only in `/shriii/prod/smoke_test_password`, passed to `create-staff-user` on stdin through SSM
-(never in argv or command output), and created with `--no-change-prompt`. The researcher role can still write
+machine, stored only in `/shriii/prod/smoke_test_password`, and passed to `create-staff-user` on stdin by
+`run "/opt/shriii/src/infra/ec2/create-smoke-user.sh [synthetic-study-id]"` (never in argv or command output),
+with `--no-change-prompt`. The check itself is `frontend/apps/web/e2e/live-prod.mjs`. The researcher role can still write
 within that synthetic study; the check only reads. Disable the account when it is not needed:
 `UPDATE governance.staff_users SET disabled = true WHERE username = 'smoke-test@shriii.local'`.
 
@@ -239,6 +240,28 @@ values and the rewrites are fixed at build time, so every change needs a new bui
    `Referrer-Policy` to `strict-origin-when-cross-origin`, as Google Identity Services requires.
 5. Only staff whose account username is their Google email can use the button. Create such accounts with
    `create-staff-user <email> --roles ...`.
+
+## Live verification (2026-10-22, release `68ffab7`)
+
+Backend deployed with `deploy.sh 68ffab72866d160731a38644cd47b8a3db4dc02d main` (migration `0007` applied;
+`/readyz` reports `0007`). Vercel production rebuilt with `NEXT_PUBLIC_DEMO_MODE=0`, `NEXT_PUBLIC_AUTH_MODE=local`
+and `API_PROXY_TARGET`. `e2e/live-prod.mjs` (headless Chromium against `https://behavioural-games.vercel.app`,
+signed in as `smoke-test@shriii.local`) passed 21 of 21 checks:
+
+| Check | Result |
+|---|---|
+| Backend behind the Vercel origin | `/readyz` via Vercel returns the EC2 API's `{"database":"ok","identity_database":"ok","migration":"0007"}`; all 29 browser `/api/v1` requests went to the Vercel origin, none to the EC2 host, and every response carried the API's `X-Request-Id` and Caddy's `Content-Security-Policy: default-src 'none'` |
+| Sign-in | password form only (no demo sign-in, no Google button while unconfigured); lands on `/research`; no demo banner; user menu shows Researcher, scope `synthetic-demo-20261022` and the session end time |
+| Research data | `/research` shows the backend study "SYNTHETIC DEMO - simulated players, not research data" (48 participants, 56 sessions); `/api/v1/studies` returns only that study |
+| `/research/validation` | renders the validation workbench |
+| `/admin` | refused in the UI ("You do not have access to this page"); `GET /api/v1/admin/kiosks` returns 403 |
+| Sign-out | returns to `/login`, clears the token; `/research` then redirects to sign-in |
+| Public `/kiosk` | canvas mounts, attract screen to the language picker, no page errors, no `/api` or upload request in 45 s |
+
+Screenshots: [`live-research.jpg`](../screenshots/deploy/live-research.jpg),
+[`live-validation.jpg`](../screenshots/deploy/live-validation.jpg),
+[`live-admin-refused.jpg`](../screenshots/deploy/live-admin-refused.jpg),
+[`live-kiosk-language.jpg`](../screenshots/deploy/live-kiosk-language.jpg).
 
 ## Rotating secrets
 
