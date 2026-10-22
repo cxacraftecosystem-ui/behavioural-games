@@ -17,6 +17,7 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
     studies: ['*'],
     permissions: ['studies.read', 'validation.read'],
     kiosk_id: null,
+    password_change_required: false,
     ...overrides,
   };
 }

@@ -5,6 +5,7 @@ describe('kiosk config', () => {
   it('uses safe defaults', () => {
     expect(parseKioskConfig({}, false)).toEqual({
       apiBase: null,
+      deviceId: null,
       mode: 'public',
       siteMode: 'supervised',
       arm: 'B_fixed',
@@ -18,6 +19,7 @@ describe('kiosk config', () => {
     const c = parseKioskConfig(
       {
         NEXT_PUBLIC_KIOSK_API_BASE: 'http://localhost:8000/',
+        NEXT_PUBLIC_KIOSK_DEVICE_ID: 'kiosk-001',
         NEXT_PUBLIC_KIOSK_MODE: 'pilot',
         NEXT_PUBLIC_SITE_MODE: 'moon',
         NEXT_PUBLIC_KIOSK_ARM: 'A_narrative',
@@ -28,6 +30,7 @@ describe('kiosk config', () => {
     );
     expect(c).toMatchObject({
       apiBase: 'http://localhost:8000',
+      deviceId: 'kiosk-001',
       mode: 'pilot',
       siteMode: 'supervised',
       arm: 'A_narrative',
@@ -53,11 +56,23 @@ describe('kiosk config', () => {
   it('never uploads in demo mode, even with an API base configured', () => {
     const env = {
       NEXT_PUBLIC_KIOSK_API_BASE: 'https://api.example.org',
+      NEXT_PUBLIC_KIOSK_DEVICE_ID: 'kiosk-001',
       NEXT_PUBLIC_DEMO_MODE: '1',
     };
     expect(parseKioskConfig(env, false).apiBase).toBeNull();
     expect(parseKioskConfig({ ...env, NEXT_PUBLIC_DEMO_MODE: '' }, false).apiBase).toBe(
       'https://api.example.org',
     );
+  });
+
+  it('never uploads from the public website: an API base alone is not a kiosk device', () => {
+    const env = { NEXT_PUBLIC_KIOSK_API_BASE: 'https://behavioural-games.vercel.app' };
+    expect(parseKioskConfig(env, false)).toMatchObject({ apiBase: null, deviceId: null });
+    expect(
+      parseKioskConfig({ ...env, NEXT_PUBLIC_KIOSK_DEVICE_ID: 'Not a valid id!' }, false).apiBase,
+    ).toBeNull();
+    expect(
+      parseKioskConfig({ ...env, NEXT_PUBLIC_KIOSK_DEVICE_ID: 'kiosk-001' }, false).apiBase,
+    ).toBe('https://behavioural-games.vercel.app');
   });
 });

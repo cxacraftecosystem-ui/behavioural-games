@@ -25,6 +25,7 @@ describe('API client', () => {
         studies: ['*'],
         permissions: [],
         kiosk_id: null,
+        password_change_required: false,
       });
     });
     const api = createApiClient({

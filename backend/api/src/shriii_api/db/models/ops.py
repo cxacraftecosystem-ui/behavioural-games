@@ -137,6 +137,8 @@ class StaffUser(Base, CreatedAtMixin):
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column()
     password_changed_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    """Set when the password was issued by an operator (CLI); cleared when the user changes it."""
     last_login_at: Mapped[datetime | None] = mapped_column()
     created_by: Mapped[str] = mapped_column(String(256))
 

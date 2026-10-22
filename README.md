@@ -14,30 +14,34 @@ Key documents:
 - [`docs/reference/agent-implementation-spec.md`](docs/reference/agent-implementation-spec.md) — product shape (routes, DB domains, dashboards).
 - [`docs/STATUS.md`](docs/STATUS.md) — what is built, what is validated vs research-only, known gaps.
 
-## Live demo (Vercel)
+## Live site (Vercel + EC2 + Supabase)
 
-**<https://behavioural-games.vercel.app>** is a read-only demo of `frontend/apps/web`, built with
-`NEXT_PUBLIC_DEMO_MODE=1`. Every push to `main` redeploys it (Vercel Git integration).
-
-What it includes:
+**<https://behavioural-games.vercel.app>** runs `frontend/apps/web` against the production pilot backend.
 
 - `/`: a landing page linking the three areas.
-- `/kiosk`: the kiosk game in the browser. Uploads are switched off, so events only queue locally.
-- `/research` and `/admin`: the research and admin consoles. Use "Continue as Researcher (demo)" or
-  "Continue as Administrator (demo)" on the sign-in page; there are no credentials. Every page shows a
-  "Demo data — synthetic, not study results" banner.
-- An in-app demo API (`/api/v1/*`, `/healthz`, `/readyz`, served by `src/app/demo-api`). It returns the same
-  synthetic fixtures the Playwright suites use. Every write returns 403.
+- `/login`: staff sign-in with email or username and password (accounts are issued by an administrator; the
+  first sign-in asks for a new password). "Sign in with Google" appears once a Google OAuth client id is
+  configured, and works only for existing staff accounts whose username is the Google email.
+- `/research` and `/admin`: the research and admin consoles, role- and study-scoped. Their data comes from the
+  FastAPI backend on EC2 (`https://52-66-109-32.sslip.io`, [docs/deploy/aws-ec2.md](docs/deploy/aws-ec2.md)),
+  reached through a server-side proxy so the browser only talks to the Vercel origin. The database is Supabase
+  Postgres in Mumbai on the Pro plan ([docs/deploy/supabase.md](docs/deploy/supabase.md)). The only study data
+  there today is synthetic (studies named "SYNTHETIC DEMO ..." and "SYNTHETIC SMOKE TEST").
+- `/kiosk`: the kiosk game in the browser, as a public demonstration. It never uploads: the public website is
+  not a registered kiosk, so events stay in the browser's local outbox. Research data comes only from
+  registered kiosk devices.
 
-What it does not include: the FastAPI backend, the job worker and PostgreSQL are not hosted on Vercel, so the
-demo has no real accounts, no participant data and no persistence. To run the full stack, follow
-[Getting started](#getting-started) and [How to run](docs/STATUS.md#how-to-run).
+Pull-request preview deployments stay self-contained: they build with `NEXT_PUBLIC_DEMO_MODE=1`, use demo
+sign-in ("Continue as Researcher (demo)") and an in-app demo API with synthetic fixtures (`src/app/demo-api`),
+refuse every write and never reach the production API.
 
 Vercel project `behavioural-games` (scope `cxacraftecosystem-8028s-projects`): Root Directory
-`frontend/apps/web`, files outside the root included, Node 24.x, env `NEXT_PUBLIC_DEMO_MODE=1`. The install and
-build commands are in `frontend/apps/web/vercel.json`, and the upload filter is the root `.vercelignore`. To
-deploy by hand, run `vercel deploy --prod` from the repository root, not from `frontend/apps/web`.
-Screenshots of the live site are in [`docs/screenshots/deploy`](docs/screenshots/deploy).
+`frontend/apps/web`, files outside the root included, Node 24.x. Production env: `NEXT_PUBLIC_DEMO_MODE=0`,
+`NEXT_PUBLIC_AUTH_MODE=local`, `API_PROXY_TARGET=https://52-66-109-32.sslip.io`; Preview env:
+`NEXT_PUBLIC_DEMO_MODE=1` ([details](docs/deploy/aws-ec2.md#web-app-on-vercel)). Merges to `main` deploy
+production (Vercel Git integration). The install and build commands are in `frontend/apps/web/vercel.json`, and
+the upload filter is the root `.vercelignore`. To deploy by hand, run `vercel deploy --prod` from the repository
+root, not from `frontend/apps/web`. Screenshots are in [`docs/screenshots/deploy`](docs/screenshots/deploy).
 
 ## Five data layers (never mixed)
 

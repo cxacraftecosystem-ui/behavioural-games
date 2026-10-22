@@ -6,8 +6,9 @@
 #                                   backend demo pipeline into a study named "SYNTHETIC DEMO ...", then cleanup
 #                                   (revoke the simulator kiosk, undo dev-only approvals). Default size: 24 players
 #                                   per language + 8 retests (the CI size: about 56 sessions, 67k raw events,
-#                                   ~220 MB), because the Supabase free plan caps the database at 500 MB and turns
-#                                   it read-only beyond that; --fast (~470k events, ~1.4 GB) needs a paid plan.
+#                                   ~220 MB). Supabase is on the Pro plan (8 GB disk), but a --fast run (~470k
+#                                   events, ~1.4 GB) turned the database read-only at ~838 MB on 2026-10-22 for an
+#                                   unexplained reason (docs/deploy/supabase.md#plan-and-disk); keep the default size.
 #
 # The demo pipeline drives the API in-process (FastAPI TestClient) with synthetic players, so it runs in a
 # one-off container with ENV=dev, AUTH_MODE=dev and a throwaway DEV_JWT_SECRET. The production keys and

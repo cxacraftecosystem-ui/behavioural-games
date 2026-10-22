@@ -164,6 +164,8 @@ const EXTRA_ROUTES: readonly { readonly href: string; readonly requires: Require
     requires: { any: ['games.write', 'admin.content', 'admin.kiosks', 'admin.settings'] },
   },
   { href: '/design-system', requires: {} },
+  // Account pages (change password): any signed-in user.
+  { href: '/account', requires: {} },
 ];
 
 /**

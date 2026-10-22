@@ -18,7 +18,7 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
 | Status | Features |
 |---|---|
 | Built | PLT-01 monorepo, PLT-02 contracts (Ajv + Pydantic parity), PLT-03 version tuple and manifest stamping, PLT-04 CI/CD, PLT-06 observability, PLT-08 plan lint, PLT-09 governance sign-off repository |
-| Partial | PLT-05 OpenTofu modules exist in `infra/tofu` but nothing is deployed; dev and pilot run on Docker Compose |
+| Partial | PLT-05 OpenTofu modules exist in `infra/tofu` but are unused; the production pilot runs on one EC2 instance (Docker Compose, `infra/ec2` scripts) with Supabase Postgres, dev on Docker Compose |
 | Replaced | PLT-07 Metabase is replaced by the custom research dashboards in `frontend/apps/web` (BUILD_DECISIONS) |
 
 ### KSK: Kiosk shell, hardware and fleet
@@ -156,10 +156,13 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
   Wait-or-Now `choice_consistency` and `effort_completion_rate` stay `not_scorable_v1` for the same reason.
 - **Art and content:** the Steady Hands lit-lamp glow washes the frame
   (measurement owners to decide); wave 2 screenshots under `docs/screenshots/wave2` were not regenerated (wave 3 storyboard is current).
-- **Only a read-only web demo is deployed.** <https://behavioural-games.vercel.app> (Vercel, `NEXT_PUBLIC_DEMO_MODE=1`)
-  serves the web app: landing page, browser kiosk with uploads off, and the research and admin consoles running on
-  synthetic fixtures from an in-app demo API. The API, worker and PostgreSQL are not hosted. No cloud backend, fleet, Ubuntu Core image
-  rollout or OTA ring has run outside CI.
+- **Production pilot deployment, synthetic data only.** <https://behavioural-games.vercel.app> (Vercel) serves the
+  web app against the FastAPI backend and worker on one EC2 instance (`docs/deploy/aws-ec2.md`) and Supabase
+  Postgres on the Pro plan with an 8 GB disk (`docs/deploy/supabase.md`). Staff sign in with password accounts
+  (`AUTH_MODE=local`); Google sign-in is built but stays off until a Google OAuth client id is configured. The
+  public `/kiosk` never uploads. The database holds only synthetic studies. An unexplained read-only incident at
+  about 838 MB on 2026-10-22 (far below the 8 GB disk) is still open. No kiosk fleet, Ubuntu Core image rollout or
+  OTA ring has run outside CI. Preview deployments stay on the in-app demo API.
 
 ## How to run
 

@@ -84,6 +84,11 @@ class AuthenticatedStaff:
     username: str
     roles: list[str]
     studies: list[str]
+    must_change_password: bool = False
+
+
+class GoogleAccountNotAllowedError(Exception):
+    """A verified Google identity that does not match an active staff account (403)."""
 
 
 def authenticate(db: Session, settings: Settings, username: str, password: str) -> AuthenticatedStaff:
@@ -107,7 +112,34 @@ def authenticate(db: Session, settings: Settings, username: str, password: str) 
     user.failed_attempts = 0
     user.locked_until = None
     user.last_login_at = now
-    return AuthenticatedStaff(user.username, list(user.roles), list(user.studies))
+    return AuthenticatedStaff(user.username, list(user.roles), list(user.studies), bool(user.must_change_password))
+
+
+def authenticate_google(db: Session, email: str) -> AuthenticatedStaff:
+    """Sign in a verified Google identity: only an existing, active staff account whose username is that email.
+
+    Allowlist rule: the staff username must equal the verified email (case-insensitive). Unknown, disabled or
+    locked accounts are refused; roles and study scope come from the staff record, never from Google. No
+    account is ever created here. The caller commits (last-login time).
+    """
+    username = email.strip().lower()
+    if not USERNAME_RE.fullmatch(username):
+        raise GoogleAccountNotAllowedError("this Google account is not registered for staff access")
+    user = db.get(StaffUser, username, with_for_update=True)
+    now = datetime.now(UTC)
+    if user is None or user.disabled:
+        raise GoogleAccountNotAllowedError("this Google account is not registered for staff access")
+    if user.locked_until is not None and user.locked_until > now:
+        raise GoogleAccountNotAllowedError("account temporarily locked after repeated failures; try again later")
+    user.last_login_at = now
+    # A Google sign-in proves the person controls the mailbox, but the local password may still be the
+    # shared initial one, so the change prompt stays until the password itself is changed.
+    return AuthenticatedStaff(user.username, list(user.roles), list(user.studies), bool(user.must_change_password))
+
+
+def password_change_required(db: Session, username: str) -> bool:
+    user = db.get(StaffUser, username)
+    return bool(user is not None and user.must_change_password)
 
 
 def change_password(db: Session, username: str, current: str, new: str) -> None:
@@ -119,6 +151,7 @@ def change_password(db: Session, username: str, current: str, new: str) -> None:
         raise ValueError("the new password must differ from the current one")
     user.password_hash = hash_password(new)
     user.password_changed_at = datetime.now(UTC)
+    user.must_change_password = False
 
 
 def upsert_staff_user(
@@ -130,8 +163,13 @@ def upsert_staff_user(
     studies: Sequence[str] = ("*",),
     actor: str,
     reset: bool = False,
+    require_change: bool = True,
 ) -> dict[str, object]:
-    """Create a staff account, or with ``reset`` replace its password and roles and unlock it."""
+    """Create a staff account, or with ``reset`` replace its password and roles and unlock it.
+
+    ``require_change`` (default) marks the password as an initial one that the user is asked to replace; pass
+    False only for service accounts whose password is held in a secret store (e.g. the smoke-test account).
+    """
     username = username.strip().lower()
     if not USERNAME_RE.fullmatch(username):
         raise ValueError("username must be 2-128 characters of a-z, 0-9, '.', '_', '@' or '-'")
@@ -153,5 +191,12 @@ def upsert_staff_user(
     user.failed_attempts = 0
     user.locked_until = None
     user.password_changed_at = now
+    user.must_change_password = require_change
     db.flush()
-    return {"username": username, "roles": user.roles, "studies": user.studies, "reset": reset}
+    return {
+        "username": username,
+        "roles": user.roles,
+        "studies": user.studies,
+        "reset": reset,
+        "must_change_password": require_change,
+    }

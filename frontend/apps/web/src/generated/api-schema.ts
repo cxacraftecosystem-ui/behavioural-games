@@ -72,6 +72,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sign-in methods enabled on this deployment */
+        get: operations["providers_api_v1_auth_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff sign-in with a Google ID token (AUTH_MODE=local, GOOGLE_CLIENT_ID set) */
+        post: operations["google_login_api_v1_auth_google_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/password": {
         parameters: {
             query?: never;
@@ -2354,6 +2388,13 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** AuthProvidersResponse */
+        AuthProvidersResponse: {
+            /** Password */
+            password: boolean;
+            /** Google Client Id */
+            google_client_id: string | null;
+        };
         /** BatteryGateIn */
         BatteryGateIn: {
             /** Language */
@@ -3049,6 +3090,15 @@ export interface components {
             /** Site Modes */
             site_modes?: string[];
         };
+        /** GoogleLoginRequest */
+        GoogleLoginRequest: {
+            /**
+             * Credential
+             * Format: password
+             * @description Google ID token from Google Identity Services
+             */
+            credential: string;
+        };
         /** GroupIndicatorOut */
         GroupIndicatorOut: {
             /** Study Id */
@@ -3620,6 +3670,11 @@ export interface components {
             permissions: string[];
             /** Kiosk Id */
             kiosk_id: string | null;
+            /**
+             * Password Change Required
+             * @default false
+             */
+            password_change_required: boolean;
         };
         /** ModelCreate */
         ModelCreate: {
@@ -4814,6 +4869,12 @@ export interface components {
             token_type: "bearer";
             /** Expires At */
             expires_at: number;
+            /**
+             * Password Change Required
+             * @description The account still uses an operator-issued initial password; prompt a change
+             * @default false
+             */
+            password_change_required: boolean;
         };
         /** TrainingRunOut */
         TrainingRunOut: {
@@ -8106,6 +8167,98 @@ export interface operations {
                 };
             };
             /** @description Disabled */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    providers_api_v1_auth_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthProvidersResponse"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    google_login_api_v1_auth_google_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Not a valid Google ID token for this client */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Verified Google email is not an active staff account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Google sign-in is not configured */
             404: {
                 headers: {
                     [name: string]: unknown;
