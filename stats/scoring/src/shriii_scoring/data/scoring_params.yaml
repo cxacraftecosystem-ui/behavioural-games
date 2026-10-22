@@ -115,6 +115,10 @@ quality:
     timing_flag_share_caution: 0.05
     timing_flag_share_exclude: 0.25
     uncertified_profile_prefixes: [uncertified]
+    # Test-only certified profiles (CI headless Chromium). They let CI produce real indicator values,
+    # but such sessions are flagged `test_timing_profile` (caution: never valid for a player report)
+    # and the API refuses them outside ENV=dev/test. Real SKUs stay uncertified until ENG-02 certifies them.
+    test_profiles: [ci-headless-test]
   integrity:
     seq_gap_grade: caution
     duplicate_seq_grade: exclude
@@ -122,7 +126,8 @@ quality:
   grades:
     exclude: [careless_fast_runs, careless_same_position, device_timing_exclude, seq_conflict]
     caution: [careless_zero_variance, walkaway, abandoned, asr_low_confidence, device_timing_caution,
-              device_uncertified_timing, possible_assistance, repeat_play, seq_gap, module_incomplete]
+              device_uncertified_timing, test_timing_profile, possible_assistance, repeat_play, seq_gap,
+              module_incomplete]
   valid_for_validation_excludes: [exclude]
   valid_for_report_excludes: [exclude, caution]
 

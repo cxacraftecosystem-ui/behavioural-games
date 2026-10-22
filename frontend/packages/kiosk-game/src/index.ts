@@ -36,5 +36,6 @@ export {
   pathwayAFactories,
   pathwayBFactories,
   registerAllModules,
+  warmupFactories,
 } from './modules.ts';
 export * from './session/index.ts';

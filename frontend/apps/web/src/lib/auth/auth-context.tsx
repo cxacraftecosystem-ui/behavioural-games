@@ -14,6 +14,7 @@ import {
 import { type ApiClient, createApiClient, unwrap } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import type { DevLoginRole } from '@/lib/api/types';
+import { createDemoToken, DEMO_MODE, type DemoRole } from '@/lib/demo';
 import { queryKeys } from '@/lib/query';
 import { type AuthConfig, OIDC_CALLBACK_PATH, readAuthConfig } from './config';
 import { beginLogin, completeLogin, logoutUrl, type OidcDeps } from './oidc';
@@ -44,6 +45,8 @@ export interface AuthContextValue {
   /** Retry loading the principal after an `error` status. */
   retry(): void;
   signInDev(input: DevSignInInput): Promise<void>;
+  /** Demo mode only: start a client-side demo session (no credentials, synthetic data only). */
+  signInDemo(role: DemoRole): void;
   signInOidc(returnTo: string): Promise<void>;
   completeOidc(callbackUrl: string): Promise<string>;
   signOut(reason?: SignOutReason): Promise<void>;
@@ -69,6 +72,7 @@ function getRuntime(): AuthRuntime {
     api: createApiClient({
       getToken: () => store.get()?.accessToken ?? null,
       onUnauthorized: () => rt.onUnauthorized(),
+      readOnly: DEMO_MODE,
     }),
     onUnauthorized: () => undefined,
   };
@@ -202,6 +206,17 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     [rt, queryClient],
   );
 
+  const signInDemo = useCallback(
+    (role: DemoRole) => {
+      if (!DEMO_MODE) throw new Error('Demo sign-in is only available in demo mode.');
+      const { token, exp } = createDemoToken(role);
+      queryClient.clear();
+      setSignOutReason(null);
+      rt.store.set({ accessToken: token, expiresAt: exp, provider: 'dev' });
+    },
+    [rt, queryClient],
+  );
+
   const signInOidc = useCallback(
     async (returnTo: string) => {
       if (config?.mode !== 'oidc') throw new Error('OIDC is not configured.');
@@ -242,6 +257,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       error: meError,
       retry,
       signInDev,
+      signInDemo,
       signInOidc,
       completeOidc,
       signOut,
@@ -256,6 +272,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       meError,
       retry,
       signInDev,
+      signInDemo,
       signInOidc,
       completeOidc,
       signOut,

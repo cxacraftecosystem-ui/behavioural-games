@@ -14,6 +14,31 @@ Key documents:
 - [`docs/reference/agent-implementation-spec.md`](docs/reference/agent-implementation-spec.md) — product shape (routes, DB domains, dashboards).
 - [`docs/STATUS.md`](docs/STATUS.md) — what is built, what is validated vs research-only, known gaps.
 
+## Live demo (Vercel)
+
+**<https://behavioural-games.vercel.app>** is a read-only demo of `frontend/apps/web`, built with
+`NEXT_PUBLIC_DEMO_MODE=1`. Every push to `main` redeploys it (Vercel Git integration).
+
+What it includes:
+
+- `/`: a landing page linking the three areas.
+- `/kiosk`: the kiosk game in the browser. Uploads are switched off, so events only queue locally.
+- `/research` and `/admin`: the research and admin consoles. Use "Continue as Researcher (demo)" or
+  "Continue as Administrator (demo)" on the sign-in page; there are no credentials. Every page shows a
+  "Demo data — synthetic, not study results" banner.
+- An in-app demo API (`/api/v1/*`, `/healthz`, `/readyz`, served by `src/app/demo-api`). It returns the same
+  synthetic fixtures the Playwright suites use. Every write returns 403.
+
+What it does not include: the FastAPI backend, the job worker and PostgreSQL are not hosted on Vercel, so the
+demo has no real accounts, no participant data and no persistence. To run the full stack, follow
+[Getting started](#getting-started) and [How to run](docs/STATUS.md#how-to-run).
+
+Vercel project `behavioural-games` (scope `cxacraftecosystem-8028s-projects`): Root Directory
+`frontend/apps/web`, files outside the root included, Node 24.x, env `NEXT_PUBLIC_DEMO_MODE=1`. The install and
+build commands are in `frontend/apps/web/vercel.json`, and the upload filter is the root `.vercelignore`. To
+deploy by hand, run `vercel deploy --prod` from the repository root, not from `frontend/apps/web`.
+Screenshots of the live site are in [`docs/screenshots/deploy`](docs/screenshots/deploy).
+
 ## Five data layers (never mixed)
 
 1. **Raw events** — append-only, `contracts/schemas/event-envelope.v1.schema.json`.

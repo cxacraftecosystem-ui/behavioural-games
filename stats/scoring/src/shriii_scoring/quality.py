@@ -157,6 +157,8 @@ def assess_session(session: SessionRecord, params: ScoringParams) -> SessionQual
     profile = session.timing_profile or ""
     if any(profile.startswith(p) for p in params.strs(q + "device.uncertified_profile_prefixes")):
         flags.add("device_uncertified_timing")
+    if profile in params.strs(q + "device.test_profiles"):
+        flags.add("test_timing_profile")
     if session.onlooker_reports > 0:
         flags.add("possible_assistance")
     linked = (session.session_context or {}).get("linked_prior_session_token")

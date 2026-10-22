@@ -5,11 +5,12 @@
  */
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import type { Page, Route } from '@playwright/test';
+import { findRepoRoot } from '../../research/load-science.server';
 import { planDefaults, propose } from '../settings/policy';
 
-const ROOT = fileURLToPath(new URL('../../../../../../../', import.meta.url));
+// From the working directory, not import.meta.url: the demo API route (src/app/demo-api) bundles this.
+const ROOT = `${findRepoRoot()}/`;
 const NOW = Date.now();
 const ago = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString();
 

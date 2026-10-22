@@ -63,4 +63,13 @@ describe('readConfig', () => {
       deviceToken: 'tok',
     });
   });
+
+  it('selects the ci-headless-test timing profile only in bridge builds', () => {
+    const env = { VITE_TEST_TIMING_PROFILE: 'ci-headless-test' } as ImportMetaEnv;
+    expect(readConfig(env, false).testTimingProfile).toBe(false);
+    expect(readConfig({ ...env, VITE_E2E_BRIDGE: 'true' }, false).testTimingProfile).toBe(true);
+    expect(readConfig({ VITE_E2E_BRIDGE: 'true' } as ImportMetaEnv, false).testTimingProfile).toBe(
+      false,
+    );
+  });
 });

@@ -9,6 +9,7 @@ import type {
   SessionMode,
   SiteMode,
 } from '@shriii/kiosk-game/core/contracts';
+import { isDemoValue } from '@/lib/demo';
 
 const MODES: readonly SessionMode[] = ['public', 'pilot', 'think_aloud', 'retest', 'substudy'];
 const SITE_MODES: readonly SiteMode[] = ['supervised', 'open_public'];
@@ -26,6 +27,8 @@ export interface KioskEnv {
   readonly NEXT_PUBLIC_DEV_PIN?: string | undefined;
   readonly NEXT_PUBLIC_DEV_OVERLAY?: string | undefined;
   readonly NEXT_PUBLIC_DEV_VOICE_PLACEHOLDER?: string | undefined;
+  /** Demo deployment: never upload (no backend); the outbox only queues locally. */
+  readonly NEXT_PUBLIC_DEMO_MODE?: string | undefined;
 }
 
 export interface KioskConfig {
@@ -40,7 +43,9 @@ export interface KioskConfig {
 }
 
 export function parseKioskConfig(env: KioskEnv, isDev: boolean): KioskConfig {
-  const rawBase = (env.NEXT_PUBLIC_KIOSK_API_BASE ?? '').trim();
+  const rawBase = isDemoValue(env.NEXT_PUBLIC_DEMO_MODE)
+    ? ''
+    : (env.NEXT_PUBLIC_KIOSK_API_BASE ?? '').trim();
   const px = Number.parseFloat(env.NEXT_PUBLIC_PX_PER_MM ?? '');
   const arm =
     env.NEXT_PUBLIC_KIOSK_ARM === 'A_narrative' || env.NEXT_PUBLIC_KIOSK_ARM === 'randomised'
@@ -76,6 +81,7 @@ export function readKioskConfig(): KioskConfig {
       NEXT_PUBLIC_DEV_PIN: process.env.NEXT_PUBLIC_DEV_PIN,
       NEXT_PUBLIC_DEV_OVERLAY: process.env.NEXT_PUBLIC_DEV_OVERLAY,
       NEXT_PUBLIC_DEV_VOICE_PLACEHOLDER: process.env.NEXT_PUBLIC_DEV_VOICE_PLACEHOLDER,
+      NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE,
     },
     process.env.NODE_ENV !== 'production',
   );

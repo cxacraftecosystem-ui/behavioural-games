@@ -60,6 +60,9 @@ from shriii_api.worker.queue import enqueue
 
 log = logging.getLogger(__name__)
 
+# Test-only certified timing profiles (kiosk E2E bridge builds in CI). Never accepted in staging/prod.
+TEST_TIMING_PROFILES: frozenset[str] = frozenset({"ci-headless-test"})
+
 Status = Literal["accepted", "duplicate", "parked", "rejected_terminal", "retryable"]
 STATUSES: tuple[Status, ...] = ("accepted", "duplicate", "parked", "rejected_terminal", "retryable")
 SCHEMA_VERSION = "1.0"
@@ -535,6 +538,12 @@ def _prepare(ctx: _Ctx, raw: Any, chunk_session: uuid.UUID, tombstoned: bool) ->
         reason = ("kiosk_mismatch", None, "event kiosk_id differs from the batch kiosk_id")
     elif event.context.synthetic and not ctx.settings.is_dev:
         reason = ("synthetic_not_allowed", None, "simulator events are refused outside dev/test")
+    elif event.versions.timing_profile_version in TEST_TIMING_PROFILES and not ctx.settings.is_dev:
+        reason = (
+            "test_timing_profile_not_allowed",
+            "/versions/timing_profile_version",
+            "test-only timing profiles (CI headless) are refused outside dev/test",
+        )
     elif tombstoned:
         reason = ("session_tombstoned", None, "session was erased or withdrawn")
     elif event.event_type in CONSENT_EVENT_TYPES and event.context.language is None:

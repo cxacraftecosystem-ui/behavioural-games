@@ -1,7 +1,8 @@
 # Session end-to-end (wave 2): full kiosk sessions played by a bot in headless Chromium (no GPU), the
 # kiosk -> API -> scoring path against PostgreSQL, and the research dashboards rendered against a live
 # API filled by the demo pipeline. Timing flags are expected on GPU-less runners: they are reported,
-# never asserted. Docker is not used; PostgreSQL runs as a service container of the runner.
+# never asserted, except in the kiosk-api job, which builds with the test-only `ci-headless-test`
+# timing profile and requires real (non-null) values for indicators a single session produces. Docker is not used; PostgreSQL runs as a service container of the runner.
 name: Session E2E
 
 on:
@@ -123,9 +124,12 @@ jobs:
           nohup .venv/bin/shriii-api serve --host 127.0.0.1 --port 8000 > api.log 2>&1 &
           for _ in $(seq 60); do curl -fsS http://127.0.0.1:8000/readyz && exit 0; sleep 1; done
           cat api.log; exit 1
-      - name: Build kiosk against the API (test bridge)
+      - name: Build kiosk against the API (test bridge, ci-headless-test timing profile)
         env:
           VITE_E2E_BRIDGE: "true"
+          # Test-only certified timing profile (never in production builds; the API refuses it outside
+          # ENV=dev/test and scoring grades such sessions caution). It lets this job assert real values.
+          VITE_TEST_TIMING_PROFILE: ci-headless-test
           VITE_API_BASE: http://127.0.0.1:8000
           VITE_KIOSK_ID: kiosk-001
         run: VITE_DEVICE_TOKEN="$KIOSK_TOKEN" pnpm --filter @shriii/kiosk exec vite build --outDir dist-e2e
@@ -139,14 +143,19 @@ jobs:
       - name: Play a session that uploads to the API
         run: |
           node frontend/apps/kiosk/e2e/full-session.mjs --url http://127.0.0.1:4180 --pathway B \
-            --seed 23 --out e2e-artifacts/kiosk-api --cap-s 900 --api --partial-play
+            --seed 23 --out e2e-artifacts/kiosk-api --cap-s 900 --api --partial-play --in-page-taps
       - name: Run the job worker (validation, eligibility, feature extraction)
         run: uv run shriii-api worker --once
+      # Required values: Don't-Tap indicators. The check accepts (with a warning) only a module that ended on
+      # its time cap in wall time (GPU-less runners, docs/STATUS.md Known gaps) or a warm-up L1 fallback; a
+      # session excluded for quality or timing fails.
       - name: Check events (accepted, gapless) and indicators via the API
         run: |
           token=$(uv run shriii-api dev-token --sub ci-e2e --roles admin,researcher | python3 -c "import json,sys; t=sys.stdin.read(); print(json.loads(t[t.index('{'):])['access_token'])")
           uv run python cicd/e2e/kiosk_api_check.py --api-url http://127.0.0.1:8000 \
-            --bot-dir e2e-artifacts/kiosk-api --token "$token"
+            --bot-dir e2e-artifacts/kiosk-api --token "$token" \
+            --timing-profile ci-headless-test \
+            --require-values expressive_restraint.premature_taps,expressive_restraint.extra_taps,response_consistency.rt_rvi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

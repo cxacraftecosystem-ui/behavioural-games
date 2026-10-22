@@ -9,7 +9,11 @@ script then checks, through the public API with a dev research token, that
 * every event the kiosk stored was accepted: the server's raw events have exactly the kiosk's seqs, gapless
   from the first, with the same event ids;
 * after the job worker drained the queue (``shriii-api worker --once``), the scoring pipeline wrote indicator
-  rows for the session (at least ``--min-indicators``; values may be missing where timing flags excluded trials).
+  rows for the session (at least ``--min-indicators``);
+* with ``--timing-profile ci-headless-test`` (the test-only certified profile of the CI kiosk build), every
+  kiosk event carries that profile and each indicator in ``--require-values`` has a real (non-null) value,
+  unless its module ended on the time cap or the warm-up fell back to L1 (accepted with a warning).
+  Without a certified profile every row is ``session_excluded``/``planned_missing`` by design.
 
 Usage::
 
@@ -44,6 +48,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bot-dir", type=Path, required=True)
     parser.add_argument("--token", required=True)
     parser.add_argument("--min-indicators", type=int, default=1)
+    parser.add_argument("--timing-profile", default=None, help="timing_profile_version every event must carry")
+    parser.add_argument(
+        "--require-values",
+        default="",
+        help="comma-separated indicator ids that must have a non-null value for this session",
+    )
     args = parser.parse_args(argv)
     api = args.api_url.rstrip("/")
     summary = json.loads((args.bot_dir / "summary.json").read_text(encoding="utf-8"))
@@ -78,6 +88,12 @@ def main(argv: list[str] | None = None) -> int:
         "server event ids match the kiosk outbox in seq order",
     )
 
+    if args.timing_profile:
+        profiles = sorted({str((e.get("versions") or {}).get("timing_profile_version")) for e in local})
+        check(
+            profiles == [args.timing_profile], f"kiosk events carry timing profile {args.timing_profile} ({profiles})"
+        )
+
     values = get(api, f"/api/v1/features?session_id={sid}", args.token)
     with_value = [v for v in values if v.get("value") is not None]
     # Headless CI Chromium has no GPU, so most trials carry timing flags and the scorer excludes them
@@ -90,8 +106,33 @@ def main(argv: list[str] | None = None) -> int:
     for v in values:
         statuses[str(v.get("status"))] = statuses.get(str(v.get("status")), 0) + 1
     print(f"  indicator statuses: {statuses}")
-    for v in with_value[:10]:
+    for v in with_value[:20]:
         print(f"  {v.get('indicator_id')} = {v.get('value')} (n={v.get('n_valid_trials')})")
+    by_id = {str(v.get("indicator_id")): v for v in values}
+    # A required indicator must have a value, except for two outcomes that are correct scoring on slow CI
+    # renderers rather than pipeline faults (accepted with a workflow warning):
+    # - the module ended on its hard cap in wall time (GPU-less frames take 0.5-2.5 s, so Don't-Tap may not
+    #   reach enough trials before 108 s): status module_incomplete, flags only module_ended:time_cap;
+    # - the warm-up fell back to L1 (the bot missed warm-up windows): excluded by level_not_fixed_l2.
+    # Anything else (session_excluded for quality or timing, error, missing row) fails.
+    levels = [str((e.get("payload") or {}).get("level")) for e in local if e.get("event_type") == "calibration_result"]
+    calibrated_l1 = levels[-1:] == ["L1"]
+    for ind in [x.strip() for x in args.require_values.split(",") if x.strip()]:
+        row = by_id.get(ind)
+        flags = [] if row is None else list(row.get("quality_flags") or [])
+        status = None if row is None else row.get("status")
+        time_cap = status == "module_incomplete" and bool(flags) and set(flags) == {"module_ended:time_cap"}
+        l1 = calibrated_l1 and flags == ["excluded_by:level_not_fixed_l2"]
+        if row is not None and row.get("value") is None and (time_cap or l1):
+            why = "the module ended on its time cap (slow renderer)" if time_cap else "the warm-up fell back to L1"
+            print(f"PASS indicator {ind} has no value because {why} (expected)")
+            print(f"::warning title=kiosk-api::{ind} has no value: {why}")
+            continue
+        check(
+            row is not None and row.get("value") is not None,
+            f"indicator {ind} has a real value "
+            f"({None if row is None else (row.get('value'), status, flags)}; calibration {levels[-1:]})",
+        )
     print(f"kiosk-api-check: {len(failures)} failure(s)")
     return 1 if failures else 0
 

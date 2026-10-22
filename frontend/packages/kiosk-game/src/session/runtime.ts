@@ -22,7 +22,11 @@ import type {
   VoiceService,
 } from '../core/contracts.ts';
 import { LocalStorageKeyValueStore } from '../engine/assignment.ts';
-import { SessionClock } from '../engine/clock.ts';
+import {
+  CI_HEADLESS_TEST_TIMING_PROFILE,
+  DEV_TIMING_PROFILE,
+  SessionClock,
+} from '../engine/clock.ts';
 import { loadGameContent } from '../engine/content.ts';
 import { BasicArtKit } from '../engine/fallbacks/basic-art.ts';
 import { genericModuleFallback } from '../engine/fallbacks/generic-module.ts';
@@ -84,6 +88,13 @@ export interface KioskRuntimeOptions {
    * smoothing would stretch every awaited tween (bridges, intros) many times over.
    */
   readonly wallClockAnimations?: boolean;
+  /**
+   * Use the test-only certified `ci-headless-test` timing profile instead of the uncertified dev
+   * profile. E2E test-bridge builds only (the kiosk app sets it for `VITE_E2E_BRIDGE=true` +
+   * `VITE_TEST_TIMING_PROFILE=ci-headless-test`); it requires strict event validation (`validate`,
+   * on only in dev and bridge builds) and is refused by the API outside ENV=dev/test.
+   */
+  readonly testTimingProfile?: boolean;
 }
 
 export interface KioskRuntime {
@@ -155,6 +166,9 @@ export async function createKioskRuntime(
   options: KioskRuntimeOptions,
 ): Promise<KioskRuntime> {
   installTweenSafeDestroy();
+  if (options.testTimingProfile && !options.validate) {
+    throw new Error('the ci-headless-test timing profile is for test-bridge builds only');
+  }
   const content = loadGameContent();
   const store = new LocalStorageKeyValueStore();
   const device = developmentDeviceConfig(store, {
@@ -190,7 +204,9 @@ export async function createKioskRuntime(
   app.renderer.on('resize', onResize);
 
   const refreshHz = await measureRefreshHz(undefined, 20).catch(() => 60);
-  const runtimeClock = new SessionClock();
+  const runtimeClock = new SessionClock({
+    profile: options.testTimingProfile ? CI_HEADLESS_TEST_TIMING_PROFILE : DEV_TIMING_PROFILE,
+  });
   const audio = options.audioFactory?.(runtimeClock) ?? new SilentAudioService(runtimeClock);
   const voice =
     options.voiceFactory?.(runtimeClock, audio) ??

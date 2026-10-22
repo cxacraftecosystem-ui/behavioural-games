@@ -39,6 +39,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { unwrap } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import { useApi, useAuth } from '@/lib/auth/auth-context';
+import { DEMO_MODE } from '@/lib/demo';
 import { cn } from '@/lib/utils';
 import { canonicalJson, isPlainObject } from '../shared/canonical-json';
 import { Hash, KeyValues, NeedsApi, useAdminMutation } from '../shared/components';
@@ -227,6 +228,8 @@ export function PolicyPanel({
     enabled: canGates,
     retry: false,
     queryFn: async () => {
+      // The demo has no release pack (fail closed); skip the request that would only 404.
+      if (DEMO_MODE) return { valid: false, version: null };
       try {
         const p = await unwrap(api.GET('/api/v1/admin/gates/release-pack/current'));
         return {

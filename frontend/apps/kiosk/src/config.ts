@@ -29,6 +29,11 @@ export interface KioskConfig {
   readonly kioskId: string | null;
   /** Device token for the uploader (bridge builds only; production uses the Electron vault). */
   readonly deviceToken: string | null;
+  /**
+   * Test-only certified timing profile `ci-headless-test` (bridge builds with
+   * VITE_TEST_TIMING_PROFILE=ci-headless-test; CI kiosk -> API -> scoring job). Never in production.
+   */
+  readonly testTimingProfile: boolean;
 }
 
 const ARMS: readonly (BatteryArm | 'randomised')[] = ['A_narrative', 'B_fixed', 'randomised'];
@@ -56,5 +61,6 @@ export function readConfig(env: ImportMetaEnv, isDev: boolean, search: string = 
     bridge,
     kioskId: kioskId === '' ? null : kioskId,
     deviceToken: token === '' ? null : token,
+    testTimingProfile: bridge && env.VITE_TEST_TIMING_PROFILE === 'ci-headless-test',
   };
 }

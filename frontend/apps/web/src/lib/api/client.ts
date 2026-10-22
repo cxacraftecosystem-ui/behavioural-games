@@ -7,6 +7,7 @@
  * a 401 on an authenticated call notifies the auth layer, which signs the user out.
  */
 import createClient, { type Client, type Middleware } from 'openapi-fetch';
+import { demoReadOnlyBody } from '../demo';
 import { ApiError, toApiError } from './errors';
 import type { paths } from './types';
 
@@ -21,7 +22,14 @@ export interface ApiClientOptions {
   readonly onUnauthorized?: () => void;
   /** Injected fetch (tests). */
   readonly fetch?: typeof globalThis.fetch;
+  /**
+   * Demo mode: answer every non-GET request with a 403 `demo_read_only` locally, without a network
+   * call, so the read-only demo never sends writes anywhere.
+   */
+  readonly readOnly?: boolean;
 }
+
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 function newRequestId(): string {
   const c = globalThis.crypto;
@@ -39,6 +47,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   });
   const auth: Middleware = {
     onRequest({ request }) {
+      if (options.readOnly && !READ_METHODS.has(request.method.toUpperCase())) {
+        return new Response(JSON.stringify(demoReadOnlyBody()), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
       const token = options.getToken();
       if (token && !request.headers.has('Authorization')) {
         request.headers.set('Authorization', `Bearer ${token}`);

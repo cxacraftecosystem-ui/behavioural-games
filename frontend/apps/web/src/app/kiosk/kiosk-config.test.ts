@@ -49,4 +49,15 @@ describe('kiosk config', () => {
       headless: false,
     });
   });
+
+  it('never uploads in demo mode, even with an API base configured', () => {
+    const env = {
+      NEXT_PUBLIC_KIOSK_API_BASE: 'https://api.example.org',
+      NEXT_PUBLIC_DEMO_MODE: '1',
+    };
+    expect(parseKioskConfig(env, false).apiBase).toBeNull();
+    expect(parseKioskConfig({ ...env, NEXT_PUBLIC_DEMO_MODE: '' }, false).apiBase).toBe(
+      'https://api.example.org',
+    );
+  });
 });
