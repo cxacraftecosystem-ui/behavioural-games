@@ -4,6 +4,9 @@
   "private": true,
   "description": "SHRIII unified web app (Next.js): /kiosk (mounts @shriii/kiosk-game), /research/*, /admin/*",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",

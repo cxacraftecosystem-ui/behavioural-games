@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # SHRIII web app (frontend/apps/web, Next.js: /kiosk, /research/*, /admin/*) as a Next.js standalone server.
-# Requires `output: "standalone"` in frontend/apps/web/next.config.* (and `outputFileTracingRoot` set to the repository
-# root so workspace packages are traced). Build from the repository root:
+# Sets NEXT_OUTPUT=standalone, which makes frontend/apps/web/next.config.ts emit `output: "standalone"` (with
+# `outputFileTracingRoot` at the repository root so workspace packages are traced). Without it (Vercel) Next.js
+# uses its default output. Build from the repository root:
 #
 #   docker build -f infra/docker/web.Dockerfile --build-arg API_PROXY_TARGET=http://api:8000 -t shriii/web .
 #
@@ -33,6 +34,7 @@ ARG NEXT_PUBLIC_API_BASE_URL=
 ARG API_PROXY_TARGET=http://127.0.0.1:8000
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
     API_PROXY_TARGET=${API_PROXY_TARGET} \
+    NEXT_OUTPUT=standalone \
     NODE_ENV=production
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pkg="${WEB_PACKAGE:-$(node -p 'require("./frontend/apps/web/package.json").name')}" \
@@ -40,7 +42,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
  && NODE_ENV=development pnpm install --store-dir /pnpm/store --offline --frozen-lockfile --filter "${pkg}..." \
  && pnpm --filter "${pkg}..." run build \
  && if [ ! -f frontend/apps/web/.next/standalone/frontend/apps/web/server.js ]; then \
-      echo "frontend/apps/web must set output: 'standalone' and outputFileTracingRoot (repo root) in next.config" >&2; exit 1; \
+      echo "frontend/apps/web next.config must emit output: 'standalone' when NEXT_OUTPUT=standalone (outputFileTracingRoot = repo root)" >&2; exit 1; \
     fi \
  && mkdir -p frontend/apps/web/public
 

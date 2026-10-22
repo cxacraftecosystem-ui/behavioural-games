@@ -1,0 +1,67 @@
+# Vercel CLI upload filter (gitignore syntax). The Vercel project's Root Directory is frontend/apps/web, but
+# the whole pnpm workspace is uploaded so the install/build can reach workspace packages and repository
+# files. Excluded below: everything the web build and the demo API never read.
+#
+# Still needed (do NOT exclude): package.json, pnpm-lock.yaml, pnpm-workspace.yaml, config/ (tsconfig base),
+# biome.json, turbo.json, frontend/** (every workspace package, or --frozen-lockfile fails), contracts/**,
+# content/games, content/i18n, content/instruments, stats/measurement-model (gates/hypotheses/dictionary),
+# backend/api/src/shriii_api/config/retention.yaml (admin settings page), tools/audio-pipeline/config
+# (admin content page).
+
+# Local state, caches and build output
+.git
+.vercel
+.env
+.env.*
+!.env.example
+**/node_modules
+.venv
+.cache
+.claude
+.stall-tmp
+.hypothesis
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/.next
+**/.turbo
+**/dist
+**/dist-e2e
+**/coverage
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+**/*.log
+
+# Documentation (docs/screenshots alone is ~800 MB)
+/docs
+
+# Python / R / infra / pipeline code the web app does not read
+/backend/*
+!/backend/api
+/backend/api/*
+!/backend/api/src
+/backend/api/src/*
+!/backend/api/src/shriii_api
+/backend/api/src/shriii_api/*
+!/backend/api/src/shriii_api/config
+/stats/*
+!/stats/measurement-model
+/stats/measurement-model/tests
+/tools/*
+!/tools/audio-pipeline
+/tools/audio-pipeline/*
+!/tools/audio-pipeline/config
+/infra
+/cicd
+/supabase
+/content/tests
+/contracts/python
+/contracts/test
+/pyproject.toml
+/uv.lock
+
+# Kiosk-only media and Electron artefacts not used by the web build
+/frontend/apps/kiosk-electron/release
+/frontend/apps/kiosk-electron/out

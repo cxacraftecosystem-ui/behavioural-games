@@ -1,6 +1,12 @@
 'use client';
 
-import { AlertTriangleIcon, KeyRoundIcon, Loader2Icon, LogInIcon } from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  FlaskConicalIcon,
+  KeyRoundIcon,
+  Loader2Icon,
+  LogInIcon,
+} from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,6 +20,7 @@ import type { DevLoginRole } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-context';
 import { safeReturnTo } from '@/lib/auth/oidc';
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, USER_ROLES } from '@/lib/auth/permissions';
+import { DEMO_BANNER_TITLE, DEMO_MODE, DEMO_ROLES } from '@/lib/demo';
 import { canOpen, defaultLanding } from '@/lib/nav';
 
 const REASON_TEXT = {
@@ -23,8 +30,16 @@ const REASON_TEXT = {
 } as const;
 
 export function LoginPanel() {
-  const { status, principal, config, configError, signOutReason, signInDev, signInOidc } =
-    useAuth();
+  const {
+    status,
+    principal,
+    config,
+    configError,
+    signOutReason,
+    signInDev,
+    signInDemo,
+    signInOidc,
+  } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get('next');
@@ -108,7 +123,40 @@ export function LoginPanel() {
           </Alert>
         )}
 
-        {config?.mode === 'oidc' && (
+        {DEMO_MODE && (
+          <section aria-label="Demo sign-in" className="space-y-3" data-testid="demo-sign-in">
+            <Alert variant="warning">
+              <FlaskConicalIcon />
+              <AlertTitle>DEMO — no real accounts</AlertTitle>
+              <AlertDescription>
+                Pick a role to explore the console. This starts a demo session in your browser only:
+                there are no credentials, no backend and no participant data. {DEMO_BANNER_TITLE}.
+              </AlertDescription>
+            </Alert>
+            {DEMO_ROLES.map((role) => (
+              <Button
+                key={role}
+                variant={role === 'researcher' ? 'default' : 'outline'}
+                className="h-auto w-full flex-col items-start gap-0.5 py-2.5 text-left whitespace-normal"
+                onClick={() => {
+                  setError(null);
+                  try {
+                    signInDemo(role);
+                  } catch (err) {
+                    setError(errorMessage(err));
+                  }
+                }}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <LogInIcon /> Continue as {ROLE_LABELS[role]} (demo)
+                </span>
+                <span className="text-xs font-normal opacity-80">{ROLE_DESCRIPTIONS[role]}</span>
+              </Button>
+            ))}
+          </section>
+        )}
+
+        {!DEMO_MODE && config?.mode === 'oidc' && (
           <Button
             className="w-full"
             disabled={busy}
@@ -125,7 +173,7 @@ export function LoginPanel() {
           </Button>
         )}
 
-        {config?.mode === 'dev' && (
+        {!DEMO_MODE && config?.mode === 'dev' && (
           <form onSubmit={onDevSubmit} className="space-y-4" aria-label="Development sign-in">
             <Alert variant="warning">
               <AlertTriangleIcon />

@@ -13,6 +13,20 @@ const apiProxyTarget = (process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000')
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
+ * Public demo deployment (Vercel): no FastAPI backend. `/api/v1/*`, `/healthz` and `/readyz` go to
+ * the in-app demo API (src/app/demo-api, synthetic fixtures, read-only) instead of the proxy.
+ */
+const demoMode = ['1', 'true', 'yes'].includes(
+  (process.env.NEXT_PUBLIC_DEMO_MODE ?? '').trim().toLowerCase(),
+);
+
+/**
+ * `output: 'standalone'` is only for the Docker image (infra/docker/web.Dockerfile sets
+ * NEXT_OUTPUT=standalone). Vercel builds use its own output format and must not set it.
+ */
+const standalone = process.env.NEXT_OUTPUT === 'standalone';
+
+/**
  * `@shriii/kiosk-game` is authored for Vite and reads `import.meta.env.*`. Next.js has no
  * `import.meta.env`, so the handful of keys it reads are statically replaced here. The dev voice
  * placeholder (Web Speech, "DEV VOICE" banner) is forced off in production builds (BUILD_DECISIONS:
@@ -44,10 +58,29 @@ const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   // infra/docker/web.Dockerfile ships the self-contained server from .next/standalone; tracing from the repo
   // root puts it at .next/standalone/frontend/apps/web/server.js with the workspace packages it needs.
-  output: 'standalone',
+  ...(standalone ? { output: 'standalone' as const } : {}),
   outputFileTracingRoot: repoRoot,
+  // The demo API reads the fixture inputs from the repository at runtime (paths relative to this app).
+  outputFileTracingIncludes: {
+    '/demo-api/**': [
+      '../../../pnpm-workspace.yaml',
+      '../../../content/games/**/*.json',
+      '../../../content/instruments/*.yaml',
+      '../../../stats/measurement-model/*.yaml',
+      '../../../stats/measurement-model/dictionary/*.yaml',
+      './src/features/research/e2e/fixtures/engine-results.json',
+      './src/features/research/e2e/fixtures/snapshot.parquet',
+    ],
+  },
   compiler: { define: kioskEnvShims },
   async rewrites() {
+    if (demoMode) {
+      return [
+        { source: '/api/v1/:path*', destination: '/demo-api/v1/:path*' },
+        { source: '/healthz', destination: '/demo-api/healthz' },
+        { source: '/readyz', destination: '/demo-api/readyz' },
+      ];
+    }
     return [
       { source: '/api/v1/:path*', destination: `${apiProxyTarget}/api/v1/:path*` },
       { source: '/healthz', destination: `${apiProxyTarget}/healthz` },
