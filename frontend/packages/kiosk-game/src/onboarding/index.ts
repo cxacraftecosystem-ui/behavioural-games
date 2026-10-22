@@ -21,3 +21,4 @@ export {
   type RichCharacter,
   type SizedButton,
 } from './types.ts';
+export { createWarmup, hasWarmupArt, WarmupModule } from './warmup/WarmupModule.ts';

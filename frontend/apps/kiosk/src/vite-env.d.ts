@@ -25,6 +25,8 @@ interface ImportMetaEnv {
   readonly VITE_KIOSK_ID?: string;
   /** Kiosk device token for event upload (bridge builds only). */
   readonly VITE_DEVICE_TOKEN?: string;
+  /** `ci-headless-test` selects the test-only certified timing profile (bridge builds only). */
+  readonly VITE_TEST_TIMING_PROFILE?: string;
 }
 
 interface ImportMeta {

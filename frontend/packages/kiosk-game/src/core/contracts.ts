@@ -172,6 +172,11 @@ export interface TimingProfile {
   readonly touchOffsetMs: number;
   /** Nominal refresh rate (Hz) measured at session start. */
   readonly refreshHz: number;
+  /**
+   * Characterised onset tolerance (ms) beyond two frames before `late_onset` is flagged; set by the
+   * certification that produced the profile. Absent = half a frame (the default for kiosk SKUs).
+   */
+  readonly onsetToleranceMs?: number;
 }
 
 /**

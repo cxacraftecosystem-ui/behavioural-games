@@ -13,6 +13,10 @@ const DevPanel = import.meta.env.DEV
 
 const ART_FACTORY: NonNullable<KioskRuntimeOptions['artFactory']> = (app, layout) =>
   createArtKit({ app, layout });
+// CI test-timing builds render on GPU-less software GL: use the low-spec tier (KSK-14: no filters,
+// reduced motion) so frame times reflect the engine rather than SwiftShader fill cost.
+const LOW_SPEC_ART_FACTORY: NonNullable<KioskRuntimeOptions['artFactory']> = (app, layout) =>
+  createArtKit({ app, layout, quality: { tier: 'low', reducedMotion: true } });
 const AUDIO_FACTORY: NonNullable<KioskRuntimeOptions['audioFactory']> = (clock) =>
   new AudioEngine({ clock });
 
@@ -55,13 +59,15 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
       siteMode: config.siteMode,
       arm: config.arm,
       strictTargets: import.meta.env.DEV,
-      artFactory: ART_FACTORY,
+      artFactory: config.testTimingProfile ? LOW_SPEC_ART_FACTORY : ART_FACTORY,
       audioFactory: AUDIO_FACTORY,
       ...(config.kioskId ? { device: { kioskId: config.kioskId } } : {}),
       ...(config.deviceToken ? { deviceToken: config.deviceToken } : {}),
       // Test bridge builds run on software GL in CI: keep animations on wall-clock time.
       ...(config.bridge ? { wallClockAnimations: true } : {}),
       ...(config.pxPerMm ? { pxPerMm: config.pxPerMm } : {}),
+      // CI only: certified test timing profile so scoring yields values (refused by a prod API).
+      ...(config.testTimingProfile ? { testTimingProfile: true } : {}),
       ...(validate ? { validate } : {}),
     }),
     [config, validate],

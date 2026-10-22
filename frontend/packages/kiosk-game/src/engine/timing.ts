@@ -194,7 +194,7 @@ export async function presentStimulus(
   render();
   const presentedOnsetMs = await clock.nextFrame();
   const period = options.monitor?.nominalPeriodMs ?? 1000 / clock.profile.refreshHz;
-  const tolerance = options.toleranceMs ?? period / 2;
+  const tolerance = options.toleranceMs ?? clock.profile.onsetToleranceMs ?? period / 2;
   const lag = presentedOnsetMs - clock.profile.displayOffsetMs - requestedOnsetMs;
   const late = lag > 2 * period + tolerance ? 'late_onset' : 'ok';
   const stall = options.monitor?.flagBetween(requestedOnsetMs, presentedOnsetMs) ?? 'ok';

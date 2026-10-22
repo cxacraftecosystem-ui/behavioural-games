@@ -5,6 +5,10 @@
  * sets `practice_struggle` (the engine then locks L1, flagged). Timing comes from the warm-up level table
  * (`tap_window_ms`, `hold_required_ms`); nothing is hard-coded. Feedback is gentle and never punitive.
  * Emits `practice.summary` (scorable = false) with motor covariates (mean tap RT, hold accuracy).
+ *
+ * Stand-alone screen for the onboarding gallery and `OnboardingFlow.runAll`. In a kiosk session ONB-05
+ * runs as the merged practice/warm-up module (`warmup/WarmupModule.ts`), which teaches the same three
+ * skills on the warm-up's measured trials so practice and calibration share one set of events.
  */
 import type { PracticeSummaryPayload } from '@shriii/contracts';
 import { gsap } from 'gsap';

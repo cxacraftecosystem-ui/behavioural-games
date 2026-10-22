@@ -9,7 +9,10 @@ script then checks, through the public API with a dev research token, that
 * every event the kiosk stored was accepted: the server's raw events have exactly the kiosk's seqs, gapless
   from the first, with the same event ids;
 * after the job worker drained the queue (``shriii-api worker --once``), the scoring pipeline wrote indicator
-  rows for the session (at least ``--min-indicators``; values may be missing where timing flags excluded trials).
+  rows for the session (at least ``--min-indicators``);
+* with ``--timing-profile ci-headless-test`` (the test-only certified profile of the CI kiosk build), every
+  kiosk event carries that profile and each indicator in ``--require-values`` has a real (non-null) value.
+  Without a certified profile every row is ``session_excluded``/``planned_missing`` by design.
 
 Usage::
 
@@ -44,6 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bot-dir", type=Path, required=True)
     parser.add_argument("--token", required=True)
     parser.add_argument("--min-indicators", type=int, default=1)
+    parser.add_argument("--timing-profile", default=None, help="timing_profile_version every event must carry")
+    parser.add_argument(
+        "--require-values",
+        default="",
+        help="comma-separated indicator ids that must have a non-null value for this session",
+    )
     args = parser.parse_args(argv)
     api = args.api_url.rstrip("/")
     summary = json.loads((args.bot_dir / "summary.json").read_text(encoding="utf-8"))
@@ -78,6 +87,12 @@ def main(argv: list[str] | None = None) -> int:
         "server event ids match the kiosk outbox in seq order",
     )
 
+    if args.timing_profile:
+        profiles = sorted({str((e.get("versions") or {}).get("timing_profile_version")) for e in local})
+        check(
+            profiles == [args.timing_profile], f"kiosk events carry timing profile {args.timing_profile} ({profiles})"
+        )
+
     values = get(api, f"/api/v1/features?session_id={sid}", args.token)
     with_value = [v for v in values if v.get("value") is not None]
     # Headless CI Chromium has no GPU, so most trials carry timing flags and the scorer excludes them
@@ -90,8 +105,15 @@ def main(argv: list[str] | None = None) -> int:
     for v in values:
         statuses[str(v.get("status"))] = statuses.get(str(v.get("status")), 0) + 1
     print(f"  indicator statuses: {statuses}")
-    for v in with_value[:10]:
+    for v in with_value[:20]:
         print(f"  {v.get('indicator_id')} = {v.get('value')} (n={v.get('n_valid_trials')})")
+    by_id = {str(v.get("indicator_id")): v for v in values}
+    for ind in [x.strip() for x in args.require_values.split(",") if x.strip()]:
+        row = by_id.get(ind)
+        check(
+            row is not None and row.get("value") is not None,
+            f"indicator {ind} has a real value ({None if row is None else (row.get('value'), row.get('status'))})",
+        )
     print(f"kiosk-api-check: {len(failures)} failure(s)")
     return 1 if failures else 0
 

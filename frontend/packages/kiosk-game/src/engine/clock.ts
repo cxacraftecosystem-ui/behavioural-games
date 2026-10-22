@@ -14,6 +14,37 @@ export const DEV_TIMING_PROFILE: TimingProfile = {
   refreshHz: 60,
 };
 
+/**
+ * Version of the test-only timing profile for headless CI Chromium (`ci-headless-test`). It is
+ * certified *only* so the CI kiosk -> API -> scoring job exercises real indicator values end to end;
+ * it says nothing about real kiosk timing. The kiosk app selects it only in E2E test-bridge builds
+ * (`VITE_E2E_BRIDGE=true` plus `VITE_TEST_TIMING_PROFILE=ci-headless-test`), the API refuses events
+ * stamped with it outside ENV=dev/test, and scoring grades such sessions `caution` (never reportable).
+ * Production SKUs stay uncertified until the timing rig (ENG-02) certifies them.
+ */
+export const CI_HEADLESS_TEST_TIMING_PROFILE_VERSION = 'ci-headless-test';
+
+/**
+ * Test-only certified profile (see {@link CI_HEADLESS_TEST_TIMING_PROFILE_VERSION}). GPU-less CI
+ * runners render with SwiftShader at roughly 1 frame per second (measured onset lag in the CI
+ * kiosk -> API job: median 1.9 s, p95 4.5 s), so its characterised onset tolerance is 5 s. Latencies
+ * stay anchored on the frame-committed onset; nothing here describes kiosk hardware.
+ */
+export const CI_HEADLESS_TEST_TIMING_PROFILE: TimingProfile = {
+  version: CI_HEADLESS_TEST_TIMING_PROFILE_VERSION,
+  certified: true,
+  displayOffsetMs: 0,
+  audioOutputOffsetMs: 0,
+  touchOffsetMs: 0,
+  refreshHz: 60,
+  onsetToleranceMs: 5000,
+};
+
+/** True for test-only timing profiles that must never reach production data. */
+export function isTestTimingProfile(version: string): boolean {
+  return version === CI_HEADLESS_TEST_TIMING_PROFILE_VERSION;
+}
+
 /** Minimal AudioContext surface used for clock mapping (keeps the clock free of DOM types in tests). */
 export interface AudioClockSource {
   readonly currentTime: number;

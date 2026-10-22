@@ -41,8 +41,7 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
 
 | Status | Features |
 |---|---|
-| Built | ONB-01 language by speaking faces, ONB-02 spoken consent with mandatory tap, ONB-03 contact opt-in and retest token, ONB-04 bands by picture, ONB-06 stop and withdrawal, ONB-07 micro-survey, ONB-08 session budget enforcement and timeline simulation |
-| Partial | ONB-05 practice integrated with warm-up: the warm-up runs the engine's generic placeholder module; the onboarding practice screen (`runPractice`) is not used in the session |
+| Built | ONB-01 language by speaking faces, ONB-02 spoken consent with mandatory tap, ONB-03 contact opt-in and retest token, ONB-04 bands by picture, ONB-05 practice merged with the warm-up (fair-world `WarmupModule`: tap, hold, say-or-touch with hand demonstrations on the unchanged `warmup.json` trials), ONB-06 stop and withdrawal, ONB-07 micro-survey, ONB-08 session budget enforcement and timeline simulation |
 
 ### ENG: Game engine
 
@@ -136,9 +135,9 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
 
 ## Known gaps
 
-- **Timing on real kiosk hardware is unverified.** No SKU is certified (ENG-02). In CI every indicator row is
-  `session_excluded` (40) or `planned_missing` (8) because headless Chromium has no certified timing profile;
-  a test-only certified profile is needed to show real values end to end. Under heavy CPU load modules overran
+- **Timing on real kiosk hardware is unverified.** No SKU is certified (ENG-02). The CI kiosk -> API -> scoring
+  job builds with the test-only `ci-headless-test` profile (E2E bridge builds only; refused by the API outside
+  ENV=dev/test; sessions graded `caution`, never reportable) and asserts real values for Don't-Tap indicators. Under heavy CPU load modules overran
   their hard caps in wall time (Don't-Tap ran 173 s against a 108 s cap), so cap enforcement must be checked on kiosk hardware.
 - **Native-speaker recordings pending.** No recorded voice manifest is bundled; the kiosk runs the silent voice.
   Weighing Post lines, the form-specific new-rule line and the optional Road Home hint lines are still missing from `content/i18n/lines.yaml`.
@@ -151,7 +150,7 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
   segment ceilings were cut (onboarding 80 s, report and survey 75 s, contact opt-in 20 s) to fund measured module budgets.
 - **Card Sort** switch position varies over 3 positions instead of 5; VAL-02's +5 post-switch trials do not fit the budget.
   Wait-or-Now `choice_consistency` and `effort_completion_rate` stay `not_scorable_v1` for the same reason.
-- **Art and content:** the warm-up shows the engine's flat placeholder; the Steady Hands lit-lamp glow washes the frame
+- **Art and content:** the Steady Hands lit-lamp glow washes the frame
   (measurement owners to decide); wave 2 screenshots under `docs/screenshots/wave2` were not regenerated (wave 3 storyboard is current).
 - **Not deployed:** no cloud environment, fleet, Ubuntu Core image rollout or OTA ring has run outside CI.
 

@@ -104,6 +104,13 @@ def test_device_and_integrity_flags() -> None:
     assert q.grade == "exclude" and not q.valid_for_report
 
 
+def test_ci_test_timing_profile_is_caution_never_reportable() -> None:
+    s = dataclasses.replace(make_session(choice_trials(20)), timing_profile="ci-headless-test")
+    q = assess_session(s, PARAMS)
+    assert "test_timing_profile" in q.flags and "device_uncertified_timing" not in q.flags
+    assert q.grade == "caution" and q.valid_for_validation and not q.valid_for_report
+
+
 @pytest.mark.parametrize("strategy", ["speed_tapper", "same_position", "always_share"])
 def test_gaming_bots_are_flagged(strategy: str) -> None:
     study = simulate_study(20, "B", seed=9, strategies={strategy: 20}, slot_form="four_stalls")  # type: ignore[dict-item]

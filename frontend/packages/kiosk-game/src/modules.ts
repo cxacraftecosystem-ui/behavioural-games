@@ -3,7 +3,7 @@
  * Pathway B micro-game, keyed by module id. The package is `sideEffects: false`, so nothing registers
  * on import; the kiosk app (or a test) calls {@link registerAllModules} once at start-up.
  *
- * The warm-up has no bespoke module yet and runs the engine's generic config-driven module.
+ * The warm-up (merged practice + calibration, ONB-05/ENG-10) is the onboarding `WarmupModule`.
  */
 import type { ModuleRegistry, Unsubscribe } from './core/contracts.ts';
 import {
@@ -20,6 +20,7 @@ import { createDontTap } from './games/dont-tap/DontTapModule.ts';
 import { set2ModuleFactories } from './games/hub/modules.ts';
 import { createTower } from './games/tower/TowerModule.ts';
 import { createWaitOrNow } from './games/wait-or-now/WaitOrNowModule.ts';
+import { createWarmup } from './onboarding/warmup/WarmupModule.ts';
 
 /** Pathway A: the three narrative episodes. */
 export function pathwayAFactories(): ModuleRegistry {
@@ -42,9 +43,14 @@ export function pathwayBFactories(): ModuleRegistry {
   };
 }
 
+/** The shared warm-up (both pathways). */
+export function warmupFactories(): ModuleRegistry {
+  return { warmup: () => createWarmup() };
+}
+
 /** Every bespoke module factory. */
 export function allModuleFactories(): ModuleRegistry {
-  return { ...pathwayAFactories(), ...pathwayBFactories() };
+  return { ...warmupFactories(), ...pathwayAFactories(), ...pathwayBFactories() };
 }
 
 /**

@@ -247,3 +247,26 @@ def test_upload_is_audited(client: TestClient, kiosk: dict[str, Any], admin: dic
     assert audit["total"] == 1
     entry = audit["items"][0]
     assert entry["actor_kind"] == "device" and entry["resource_id"] == batch["batch_id"]
+
+
+def test_ci_test_timing_profile_only_in_dev_or_test(
+    client: TestClient, kiosk: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from shriii_api.settings import Settings  # noqa: PLC0415
+
+    def stamped() -> list[dict[str, Any]]:
+        events = session_events()
+        for e in events:
+            e["versions"]["timing_profile_version"] = "ci-headless-test"
+        return events
+
+    events = stamped()
+    chunk = encrypted_chunk(events, kiosk["public_key"], os.urandom(32))
+    assert _post(client, kiosk, make_batch(events, chunks=[chunk])).json()["summary"]["accepted"] == 10
+    # Outside ENV=dev/test (staging, prod) every event stamped with the test profile is refused.
+    monkeypatch.setattr(Settings, "is_dev", property(lambda _self: False))
+    events = stamped()
+    chunk = encrypted_chunk(events, kiosk["public_key"], os.urandom(32))
+    body = _post(client, kiosk, make_batch(events, chunks=[chunk])).json()
+    assert body["summary"]["accepted"] == 0
+    assert {x["reason_code"] for x in body["results"]} == {"test_timing_profile_not_allowed"}
