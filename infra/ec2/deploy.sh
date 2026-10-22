@@ -39,7 +39,14 @@ echo "IMAGE_TAG=$IMAGE_TAG" >>"$ETC/deploy.env"
 log "render secrets from SSM"
 "$SRC/infra/ec2/render-env.sh" "$ETC/api.env"
 
-log "pull images ($IMAGE_TAG)"
+REGISTRY="${IMAGE_REGISTRY:-626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii}"
+if [[ "$REGISTRY" == *.dkr.ecr.*.amazonaws.com/* ]]; then
+  log "ECR login (instance role)"
+  aws ecr get-login-password --region "${AWS_REGION:-ap-south-1}" |
+    docker login --username AWS --password-stdin "${REGISTRY%%/*}" >/dev/null
+fi
+
+log "pull images ($REGISTRY, $IMAGE_TAG)"
 "${COMPOSE[@]}" --profile ops pull --quiet api worker migrate caddy
 
 log "migrate (research + identity)"
