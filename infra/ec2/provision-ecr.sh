@@ -18,6 +18,10 @@ export AWS_PAGER=""
 
 PROJECT=shriii-kiosk-games
 REPO_SLUG=cxacraftecosystem-ui/behavioural-games
+# This repository uses GitHub's immutable OIDC subject (owner and repository ids), so the token's sub is
+# repo:<owner>@<owner id>/<repo>@<repo id>:ref:refs/heads/main. Both forms are accepted, for main only.
+REPO_IDS="$(gh api "repos/$REPO_SLUG" --jq '"cxacraftecosystem-ui@\(.owner.id)/behavioural-games@\(.id)"' 2>/dev/null ||
+  echo "cxacraftecosystem-ui@293924172/behavioural-games@1429338453")"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 TAGS=("Key=Project,Value=$PROJECT")
 log() { printf '[provision-ecr] %s\n' "$*"; }
@@ -46,7 +50,7 @@ TRUST=$(cat <<EOF
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Federated":"${OIDC_ARN}"},
 "Action":"sts:AssumeRoleWithWebIdentity","Condition":{"StringEquals":{
 "token.actions.githubusercontent.com:aud":"sts.amazonaws.com",
-"token.actions.githubusercontent.com:sub":"repo:${REPO_SLUG}:ref:refs/heads/main"}}}]}
+"token.actions.githubusercontent.com:sub":["repo:${REPO_SLUG}:ref:refs/heads/main","repo:${REPO_IDS}:ref:refs/heads/main"]}}}]}
 EOF
 )
 if ! aws iam get-role --role-name shriii-gha-ecr-push >/dev/null 2>&1; then

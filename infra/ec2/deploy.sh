@@ -27,6 +27,10 @@ log "infra checkout -> $GIT_REF"
 git -C "$SRC" fetch --quiet --depth 1 origin "$GIT_REF"
 git -C "$SRC" checkout --quiet --force FETCH_HEAD
 log "infra at $(git -C "$SRC" rev-parse --short HEAD)"
+# Continue with the freshly checked-out copy of this script, not the one bash already started reading.
+if [[ -z "${SHRIII_DEPLOY_REEXEC:-}" ]]; then
+  SHRIII_DEPLOY_REEXEC=1 exec "$SRC/infra/ec2/deploy.sh" "$IMAGE_TAG" "$GIT_REF"
+fi
 
 # Non-secret deploy settings: keep SITE_HOST (written by user data), update IMAGE_TAG.
 touch "$ETC/deploy.env"
