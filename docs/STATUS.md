@@ -137,12 +137,12 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
 
 - **Timing on real kiosk hardware is unverified.** No SKU is certified (ENG-02). The CI kiosk -> API -> scoring
   job builds with the test-only `ci-headless-test` profile (E2E bridge builds only; refused by the API outside
-  ENV=dev/test; sessions graded `caution`, never reportable) and asserts real values for Don't-Tap `premature_taps` and `extra_taps` (the bot injects its taps in-page there,
-  because CDP pointer events on a blocked main thread get 5-20 ms latencies; a warm-up L1 fallback, which excludes
-  them by rule, is accepted with a warning). On those GPU-less runners every module
-  still ends on its hard cap in wall time (Don't-Tap at 108 s), so `response_consistency.rt_rvi`, which needs a
-  completed Don't-Tap, has no value there and is not asserted. Under heavy CPU load modules overran their hard caps
-  (Don't-Tap ran 173 s against a 108 s cap), so cap enforcement must be checked on kiosk hardware.
+  ENV=dev/test; sessions graded `caution`, never reportable). The bot injects its taps in-page there, because CDP
+  pointer events on a blocked main thread get 5-20 ms latencies. The job requires real values for the Don't-Tap
+  indicators `premature_taps`, `extra_taps` and `rt_rvi`. On GPU-less runners a frame takes 0.5-2.5 s and modules
+  end on their hard caps in wall time, so the job accepts, with a warning, a Don't-Tap that hit its 108 s cap or
+  a warm-up L1 fallback; a session excluded for quality or timing fails. Under heavy CPU load modules overran their
+  hard caps (Don't-Tap ran 173 s against a 108 s cap), so cap enforcement must be checked on kiosk hardware.
 - **Native-speaker recordings pending.** No recorded voice manifest is bundled; the kiosk runs the silent voice.
   Weighing Post lines, the form-specific new-rule line and the optional Road Home hint lines are still missing from `content/i18n/lines.yaml`.
 - **Translations are machine drafts pending native review.** hi-IN, mr-IN and ta-IN are LLM-assisted drafts
