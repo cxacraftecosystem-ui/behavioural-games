@@ -152,7 +152,10 @@ Legend: **Built** = code and tests in the repo, run in CI. **Partial** = built b
   Wait-or-Now `choice_consistency` and `effort_completion_rate` stay `not_scorable_v1` for the same reason.
 - **Art and content:** the Steady Hands lit-lamp glow washes the frame
   (measurement owners to decide); wave 2 screenshots under `docs/screenshots/wave2` were not regenerated (wave 3 storyboard is current).
-- **Not deployed:** no cloud environment, fleet, Ubuntu Core image rollout or OTA ring has run outside CI.
+- **Only a read-only web demo is deployed.** <https://behavioural-games.vercel.app> (Vercel, `NEXT_PUBLIC_DEMO_MODE=1`)
+  serves the web app: landing page, browser kiosk with uploads off, and the research and admin consoles running on
+  synthetic fixtures from an in-app demo API. The API, worker and PostgreSQL are not hosted. No cloud backend, fleet, Ubuntu Core image
+  rollout or OTA ring has run outside CI.
 
 ## How to run
 
