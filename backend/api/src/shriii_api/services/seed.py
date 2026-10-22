@@ -30,7 +30,9 @@ def seed_reference(db: Session, actor: str) -> dict[str, Any]:
     }
 
 
-def seed_demo_study(db: Session, actor: str, study_id: str = DEMO_STUDY_ID) -> dict[str, Any]:
+def seed_demo_study(
+    db: Session, actor: str, study_id: str = DEMO_STUDY_ID, *, name: str | None = None
+) -> dict[str, Any]:
     """An S2-style pilot study with two arms, T1/T2 occasions (retest 14-28 days), quotas and a plan."""
     study = db.get(Study, study_id)
     if study is not None:
@@ -38,7 +40,7 @@ def seed_demo_study(db: Session, actor: str, study_id: str = DEMO_STUDY_ID) -> d
     study = Study(
         study_id=study_id,
         code="S2",
-        name="Demo criterion pilot (synthetic)",
+        name=name or "Demo criterion pilot (synthetic)",
         stage="criterion_pilot",
         status="active",
         requires_prereg=True,

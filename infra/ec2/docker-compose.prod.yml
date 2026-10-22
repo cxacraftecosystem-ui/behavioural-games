@@ -1,0 +1,93 @@
+# SHRIII backend on one EC2 instance: API + job worker behind Caddy (automatic Let's Encrypt TLS).
+# The databases are on Supabase (docs/deploy/supabase.md); nothing stateful runs here except Caddy's
+# certificate store and the API data dir (demo summaries, local snapshots).
+#
+# Run only through infra/ec2/deploy.sh, which renders the two env files first:
+#   /etc/shriii/api.env     secrets from SSM /shriii/prod/* (root-only, 0600, never in git or images)
+#   /etc/shriii/deploy.env  SITE_HOST, IMAGE_TAG (non-secret)
+#
+#   docker compose --env-file /etc/shriii/deploy.env -f infra/ec2/docker-compose.prod.yml up -d
+name: shriii
+
+x-backend: &backend
+  env_file:
+    - path: api.prod.env # non-secret production settings (committed)
+      required: true
+    - path: /etc/shriii/api.env # secrets (rendered from SSM at deploy time)
+      required: true
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  volumes:
+    - apidata:/var/lib/shriii
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  api:
+    <<: *backend
+    image: ghcr.io/cxacraftecosystem-ui/behavioural-games-api:${IMAGE_TAG:-latest}
+    environment:
+      DB_POOL_SIZE: "4"
+    expose:
+      - "8000"
+    mem_limit: 1536m
+
+  worker:
+    <<: *backend
+    image: ghcr.io/cxacraftecosystem-ui/behavioural-games-worker:${IMAGE_TAG:-latest}
+    environment:
+      DB_POOL_SIZE: "3"
+    mem_limit: 1536m
+
+  # One-shot jobs (deploy.sh): `run --rm migrate` (research + identity Alembic upgrade), and the operator
+  # commands in docs/deploy/aws-ec2.md (create-staff-user, demo seeding).
+  migrate:
+    <<: *backend
+    image: ghcr.io/cxacraftecosystem-ui/behavioural-games-api:${IMAGE_TAG:-latest}
+    restart: "no"
+    profiles: ["ops"]
+    environment:
+      DB_POOL_SIZE: "2"
+    command: ["shriii-api", "migrate"]
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_HOST: ${SITE_HOST:?SITE_HOST must be set in /etc/shriii/deploy.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  apidata:
+  caddy_data:
+  caddy_config:

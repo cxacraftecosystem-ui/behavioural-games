@@ -8,6 +8,8 @@
 | `docker/healthcheck.py` | `shriii-healthcheck http <url>` / `db` probes for slim images. |
 | `docker/r-psychometrics.Dockerfile` | R backend image (owned by the psychometrics stream). |
 | `compose/compose.full.yml` | Full local / 2-VM pilot stack: postgres 18, migrate (one-shot), api, worker, web, kiosk, adminer. |
+| `ec2/` | Production pilot on one EC2 instance: compose (api, worker, Caddy TLS), provisioning, SSM secret rendering, deploy/rollback, synthetic smoke and demo (see `docs/deploy/aws-ec2.md`). |
+| `supabase/` | Supabase role and vault-database bootstrap (see `docs/deploy/supabase.md`). |
 | `tofu/` | OpenTofu for AWS ap-south-1 (see `tofu/README.md`). |
 
 Every Dockerfile builds from the repository root and has a `<name>.Dockerfile.dockerignore` next to it.

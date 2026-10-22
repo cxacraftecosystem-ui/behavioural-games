@@ -1,14 +1,15 @@
-"""Dev login (ENV=dev/test only) and principal introspection."""
+"""Staff password login (AUTH_MODE=local), dev login (ENV=dev/test only) and principal introspection."""
 
 from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Request, Response
+from pydantic import BaseModel, Field, SecretStr
 
-from shriii_api.api.deps import CurrentPrincipal, SettingsDep, raise_error
-from shriii_api.auth.tokens import AuthError, issue_dev_token
+from shriii_api.api.deps import CurrentPrincipal, DbSession, SettingsDep, raise_error, set_audit
+from shriii_api.auth.tokens import AuthError, issue_dev_token, issue_local_token
+from shriii_api.services import staff as staff_svc
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,6 +45,55 @@ def dev_login(body: DevLoginRequest, settings: SettingsDep) -> TokenResponse:
     except AuthError as exc:
         raise_error(404, "dev_login_disabled", str(exc))
     return TokenResponse(access_token=token, expires_at=exp)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=2, max_length=128)
+    password: SecretStr = Field(min_length=1, max_length=1024)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: SecretStr = Field(min_length=1, max_length=1024)
+    new_password: SecretStr = Field(min_length=staff_svc.MIN_PASSWORD_LENGTH, max_length=1024)
+
+
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Staff password login (AUTH_MODE=local)",
+    responses={401: {"description": "Invalid credentials or locked account"}, 404: {"description": "Disabled"}},
+)
+def login(body: LoginRequest, request: Request, db: DbSession, settings: SettingsDep) -> TokenResponse:
+    if settings.auth_mode != "local":
+        raise_error(404, "password_login_disabled", "password login is not enabled on this deployment")
+    username = body.username.strip().lower()
+    set_audit(request, action="auth.login", resource_type="staff_user", resource_id=username)
+    try:
+        user = staff_svc.authenticate(db, settings, username, body.password.get_secret_value())
+    except staff_svc.LoginError as exc:
+        db.commit()  # keep the failure counter and lockout even though the request fails
+        request.state.audit_outcome = "denied"
+        raise_error(401, "invalid_credentials", str(exc))
+    token, exp = issue_local_token(settings, user.username, user.roles, user.studies)
+    return TokenResponse(access_token=token, expires_at=exp)
+
+
+@router.post("/password", status_code=204, summary="Change the caller's staff password (AUTH_MODE=local)")
+def change_password(
+    body: PasswordChangeRequest, request: Request, principal: CurrentPrincipal, db: DbSession, settings: SettingsDep
+) -> Response:
+    if settings.auth_mode != "local" or principal.kind != "user":
+        raise_error(404, "password_login_disabled", "password login is not enabled on this deployment")
+    set_audit(request, action="auth.password_change", resource_type="staff_user", resource_id=principal.sub)
+    try:
+        staff_svc.change_password(
+            db, principal.sub, body.current_password.get_secret_value(), body.new_password.get_secret_value()
+        )
+    except staff_svc.LoginError as exc:
+        raise_error(403, "invalid_credentials", str(exc))
+    except ValueError as exc:
+        raise_error(422, "weak_password", str(exc))
+    return Response(status_code=204)
 
 
 @router.get("/me", response_model=MeResponse, summary="Current principal")

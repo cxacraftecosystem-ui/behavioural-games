@@ -1,6 +1,6 @@
 # shriii-api: backend API, database and job worker
 
-This package is the FastAPI service, the PostgreSQL 18 schema with its Alembic migrations, and the Postgres-backed job worker. It covers layer 1 (raw events) and stores layers 2 to 5. Indicator formulas and psychometrics are computed by `shriii_scoring` and `shriii_validation`, which this package calls through thin adapters in `src/shriii_api/adapters/`.
+This package is the FastAPI service, the PostgreSQL 18 schema (PostgreSQL 17 compatible; production runs on Supabase, see `docs/deploy/supabase.md`; the API and worker run on EC2, see `docs/deploy/aws-ec2.md`) with its Alembic migrations, and the Postgres-backed job worker. It covers layer 1 (raw events) and stores layers 2 to 5. Indicator formulas and psychometrics are computed by `shriii_scoring` and `shriii_validation`, which this package calls through thin adapters in `src/shriii_api/adapters/`.
 
 ## Run
 
@@ -45,7 +45,7 @@ To run the tests: `uv run pytest backend/api/tests`. They need a reachable Postg
 
 - **Batch checksum.** `UploadBatch.sha256` is the lower-case hex SHA-256 of the RFC 8785 (JCS) serialisation of `session_chunks`. In JavaScript this is `JSON.stringify` with recursively sorted keys. See `shriii_api.canonical`.
 - **Encrypted chunks.** The 32-byte DEK is sealed with libsodium `crypto_box_seal` to the backend X25519 public key, which `POST /api/v1/admin/kiosks` returns. The ciphertext is AES-256-GCM with a 12-byte nonce and no AAD, over NDJSON (one event per line). `none_dev` plaintext chunks are accepted only when `ENV` is dev or test.
-- **Device auth.** Kiosks send `Authorization: Bearer kdt_...`. The device token is shown once when the kiosk is registered. Users send OIDC JWTs, or in dev a token from `POST /api/v1/auth/dev-login`.
+- **Device auth.** Kiosks send `Authorization: Bearer kdt_...`. The device token is shown once when the kiosk is registered. Users send OIDC JWTs (`AUTH_MODE=oidc`), staff tokens from `POST /api/v1/auth/login` (`AUTH_MODE=local`: accounts in `governance.staff_users`, created with `shriii-api create-staff-user`, password on stdin), or in dev a token from `POST /api/v1/auth/dev-login`.
 - **Per-event statuses.** Each event gets one of `accepted`, `duplicate`, `parked`, `rejected_terminal` or `retryable`. A replayed `batch_id` returns the stored result with `duplicate_batch=true`.
 
 ## Data layout

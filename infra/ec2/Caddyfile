@@ -1,0 +1,60 @@
+# TLS edge for the SHRIII API (Caddy 2.10). SITE_HOST is <elastic-ip-with-dashes>.sslip.io; Caddy obtains
+# and renews a Let's Encrypt certificate for it automatically (HTTP-01/TLS-ALPN-01 on ports 80/443).
+{
+	admin off
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 60s
+			idle 120s
+		}
+	}
+}
+
+{$SITE_HOST} {
+	encode zstd gzip
+
+	# Request size limits. UploadBatch bodies are capped at MAX_BATCH_BYTES (1 MiB) by the API; allow
+	# headroom for JSON framing and refuse anything larger at the edge. CSV/XLSX criterion imports get 10 MB;
+	# every other request 2 MB.
+	@batch path /api/v1/events/batch
+	request_body @batch {
+		max_size 2MB
+	}
+	@imports path /api/v1/assessment-responses/import*
+	request_body @imports {
+		max_size 10MB
+	}
+	@other not path /api/v1/events/batch /api/v1/assessment-responses/import*
+	request_body @other {
+		max_size 2MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		-Via
+	}
+	# JSON API: nothing may be framed or executed. The interactive docs (/docs, /redoc) load Swagger UI
+	# and ReDoc from cdn.jsdelivr.net, so they get a narrower policy that allows exactly that.
+	@docs path /docs /docs/* /redoc
+	header @docs Content-Security-Policy "default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://fastapi.tiangolo.com https://cdn.redoc.ly; connect-src 'self'; worker-src blob:; frame-ancestors 'none'"
+	@notdocs not path /docs /docs/* /redoc
+	header @notdocs Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+
+	reverse_proxy api:8000 {
+		health_uri /healthz
+		health_interval 15s
+		header_up -X-Forwarded-Host
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

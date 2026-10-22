@@ -31,7 +31,7 @@ tokens (``kdt_...``). Every write and every research-data read is audited.
 """
 
 OPENAPI_TAGS: list[dict[str, Any]] = [
-    {"name": "auth", "description": "Dev login and principal introspection."},
+    {"name": "auth", "description": "Staff login (AUTH_MODE=local), dev login and principal introspection."},
     {"name": "sessions", "description": "Game session lifecycle (create, resume, complete, invalidate)."},
     {"name": "events", "description": "Idempotent UploadBatch ingestion (layer 1)."},
     {"name": "games", "description": "Game definitions and approved versions."},
@@ -68,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.api_cors_origins,
+        allow_origin_regex=settings.api_cors_origin_regex,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Device-Token", "X-Request-Id"],

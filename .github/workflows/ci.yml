@@ -251,6 +251,60 @@ jobs:
             kiosk.log
           if-no-files-found: ignore
 
+  migrations:
+    name: Migrations and seed - PostgreSQL ${{ matrix.postgres }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # 18 is the plan's target (Docker Compose, CI); 17 is the hosted Supabase major (docs/deploy/supabase.md).
+        postgres: ["17", "18"]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_DB: shriii
+          POSTGRES_USER: dev
+          POSTGRES_PASSWORD: dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dev -d shriii"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://dev:dev@localhost:5432/shriii
+      # Separate identity vault database, as in production.
+      IDENTITY_DATABASE_URL: postgresql+psycopg://dev:dev@localhost:5432/shriii_identity
+      ENV: test
+      AUTH_MODE: dev
+      LOG_JSON: "false"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: uv sync --all-packages
+      - name: Create the identity vault database
+        run: PGPASSWORD=dev psql -h localhost -U dev -d shriii -v ON_ERROR_STOP=1 -c "CREATE DATABASE shriii_identity"
+      - name: Migrate (research + identity), seed, migrate again (idempotent)
+        run: |
+          uv run shriii-api migrate
+          uv run shriii-api seed --demo > /dev/null
+          uv run shriii-api migrate
+      - name: Check server major and Alembic heads
+        run: |
+          PGPASSWORD=dev psql -h localhost -U dev -d shriii -tAc "SHOW server_version" | grep -E "^${{ matrix.postgres }}\."
+          research=$(PGPASSWORD=dev psql -h localhost -U dev -d shriii -tAc "SELECT version_num FROM public.alembic_version")
+          identity=$(PGPASSWORD=dev psql -h localhost -U dev -d shriii_identity -tAc "SELECT version_num FROM public.alembic_version_identity")
+          echo "research=$research identity=$identity"
+          cd backend/api
+          test "$research" = "$(uv run alembic heads | awk '{print $1}')"
+          test "$identity" = "$(uv run alembic -n identity heads | awk '{print $1}')"
+
   compose:
     name: Docker images and compose stack
     runs-on: ubuntu-24.04
@@ -303,6 +357,12 @@ jobs:
             tofu -chdir="$root" validate -no-color
             echo "::endgroup::"
           done
+      - name: EC2 deployment files (shellcheck, compose config, Caddyfile)
+        run: |
+          shellcheck -x infra/ec2/*.sh
+          sudo install -d -m 700 /etc/shriii && sudo touch /etc/shriii/api.env
+          SITE_HOST=ci.example.invalid sudo -E docker compose -f infra/ec2/docker-compose.prod.yml --profile ops config --quiet
+          docker run --rm -e SITE_HOST=ci.example.invalid -v "$PWD/infra/ec2/Caddyfile:/etc/caddy/Caddyfile:ro"             caddy:2.10 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Region policy (PLT-05 - India regions only)
         run: |
           found=$(grep -rhoE '\b(us|eu|ap|sa|ca|me|af|il|mx)-(north|south|east|west|central|northeast|southeast|gov-east|gov-west)-[0-9]\b' infra/tofu --include='*.tf' --include='*.tfvars*' | sort -u)
@@ -313,7 +373,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [plan, node, python, side-tools, e2e, compose, infra]
+    needs: [plan, node, python, side-tools, migrations, e2e, compose, infra]
     runs-on: ubuntu-24.04
     steps:
       - name: All required jobs passed
