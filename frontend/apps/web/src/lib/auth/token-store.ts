@@ -4,7 +4,7 @@
  * unavailable. Expired tokens read back as null.
  */
 
-export type AuthProviderId = 'dev' | 'oidc';
+export type AuthProviderId = 'dev' | 'oidc' | 'local' | 'google';
 
 export interface StoredSession {
   readonly accessToken: string;
@@ -35,7 +35,10 @@ function isStoredSession(value: unknown): value is StoredSession {
     v.accessToken.length > 0 &&
     typeof v.expiresAt === 'number' &&
     Number.isFinite(v.expiresAt) &&
-    (v.provider === 'dev' || v.provider === 'oidc') &&
+    (v.provider === 'dev' ||
+      v.provider === 'oidc' ||
+      v.provider === 'local' ||
+      v.provider === 'google') &&
     (v.idToken === undefined || typeof v.idToken === 'string')
   );
 }

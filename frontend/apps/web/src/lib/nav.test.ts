@@ -40,6 +40,7 @@ function principalFor(role: UserRole): Principal {
     studies: ['*'],
     permissions: (matrix.roles[role] ?? []).filter(isPermission),
     kiosk_id: null,
+    password_change_required: false,
   });
 }
 
@@ -143,6 +144,7 @@ describe('principal without console permissions', () => {
       studies: [],
       permissions: [],
       kiosk_id: null,
+      password_change_required: false,
     });
     expect(visibleNav(p)).toEqual([]);
     expect(defaultLanding(p)).toBe('/no-access');

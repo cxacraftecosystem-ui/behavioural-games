@@ -101,6 +101,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--roles", default="admin", help="comma-separated: admin, researcher, administrator, analyst")
     p.add_argument("--studies", default="*", help="comma-separated study ids ('*' = all)")
     p.add_argument("--reset", action="store_true", help="replace the password and roles of an existing account")
+    p.add_argument(
+        "--no-change-prompt",
+        action="store_true",
+        help="do not ask the user to replace this password (service accounts whose password lives in SSM)",
+    )
     p = sub.add_parser("dev-token", help="Print a dev JWT (ENV=dev/test only)")
     p.add_argument("--sub", default="dev-admin")
     p.add_argument("--roles", default="admin", help="comma-separated")
@@ -224,6 +229,7 @@ def main(argv: list[str] | None = None) -> int:
                     studies=[x.strip() for x in args.studies.split(",") if x.strip()],
                     actor="cli:create-staff-user",
                     reset=args.reset,
+                    require_change=not args.no_change_prompt,
                 )
         except ValueError as exc:
             sys.stderr.write(f"create-staff-user: {exc}\n")

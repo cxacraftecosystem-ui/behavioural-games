@@ -12,6 +12,24 @@ in the repository; every credential lives in AWS SSM Parameter Store.
 | Organisation | `pifvglrcqwrizapmooik` (the other projects in this org are unrelated and must not be touched) |
 | Region | `ap-south-1` (Mumbai), for DPDP data residency |
 | Engine | PostgreSQL 17 (Supabase does not offer 18 yet; see [PostgreSQL 17 compatibility](#postgresql-17-compatibility)) |
+| Plan | organisation on the **Pro plan**; project disk **8 GB** (see [Plan and disk](#plan-and-disk)) |
+
+## Plan and disk
+
+The organisation is on Supabase's Pro plan and the project has an 8 GB disk. Earlier versions of these documents
+said "free plan, 500 MB cap"; that was wrong.
+
+**Unexplained read-only incident (2026-10-22).** While the `--fast` synthetic demo pipeline was writing raw
+events, the database switched to read-only at a size of about 838 MB, roughly a tenth of the disk. The synthetic
+raw events were truncated to recover. Why it happened is **not known**. The project's disk configuration shows a
+modification at 2026-10-22 08:35 UTC; whether that change (or a disk resize or autoscaling step around it) is
+related has not been established, and no Supabase explanation has been obtained. Until it is understood:
+
+- check `select pg_size_pretty(pg_database_size('postgres'))` and the disk usage in the Supabase dashboard before
+  any large write (bulk import, demo pipeline above the default size, real data collection);
+- if the database turns read-only again, record the time, the database size and the dashboard's disk figures,
+  and open a Supabase support ticket before truncating anything;
+- budget about 3 KB per raw event including indexes.
 
 ## Databases and roles
 
@@ -66,7 +84,7 @@ Docker involved.
 export MSYS_NO_PATHCONV=1   # Git Bash on Windows only
 export DATABASE_URL=$(aws ssm get-parameter --name /shriii/prod/DATABASE_URL --with-decryption --query Parameter.Value --output text)
 export IDENTITY_DATABASE_URL=$(aws ssm get-parameter --name /shriii/prod/IDENTITY_DATABASE_URL --with-decryption --query Parameter.Value --output text)
-uv run shriii-api migrate     # research to head (0005), identity to head (i0002)
+uv run shriii-api migrate     # research to head (0007), identity to head (i0002)
 uv run shriii-api seed        # instruments, dictionary, games, content versions
 ```
 
@@ -105,7 +123,8 @@ slip in. The rest of CI stays on 18.
 
 ## Operations notes
 
-- **Backups:** Supabase daily backups come with the plan. Turn on PITR before real participant data arrives.
+- **Backups:** daily backups come with the Pro plan. Turn on PITR (a paid add-on) before real participant data
+  arrives.
 - **Event partitions:** migration 0002 creates `kiosk_raw.events_pYYYYMMDD` for yesterday to day +7. The
   worker must keep creating them.
 - **Network restrictions:** after the EC2 Elastic IP is fixed, restrict database access to it (and the

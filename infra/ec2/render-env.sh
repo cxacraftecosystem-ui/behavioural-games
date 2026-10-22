@@ -5,7 +5,8 @@
 #
 # Every parameter under SSM_PREFIX (default /shriii/prod/) whose last path segment is an upper-case
 # environment variable name (DATABASE_URL, LOCAL_JWT_SECRET, ...) becomes VAR='value'. Lower-case names
-# (db_password, admin_initial_password, ...) are operator material and are skipped. The file is written
+# (db_password, admin_initial_password, ...) are operator material and are skipped, except the explicit
+# mappings in LOWER_TO_ENV (google_client_id -> GOOGLE_CLIENT_ID, an OAuth client id). The file is written
 # atomically with mode 0600 and never printed. Runs with the instance role (ssm:GetParametersByPath and
 # kms:Decrypt on that prefix only).
 set -euo pipefail
@@ -26,6 +27,9 @@ aws ssm get-parameters-by-path --region "$REGION" --path "$PREFIX" --recursive -
   --query 'Parameters[].[Name,Value]' --output text |
   while IFS=$'\t' read -r name value; do
     var="${name##*/}"
+    case "$var" in
+      google_client_id) var=GOOGLE_CLIENT_ID ;;  # LOWER_TO_ENV: optional, enables Google sign-in
+    esac
     [[ "$var" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
     if [[ "$value" == *"'"* || "$value" == *$'\n'* ]]; then
       echo "render-env: $name contains a quote or newline; refusing" >&2

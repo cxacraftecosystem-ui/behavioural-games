@@ -168,6 +168,97 @@
         }
       }
     },
+    "/api/v1/auth/providers": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign-in methods enabled on this deployment",
+        "operationId": "providers_api_v1_auth_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthProvidersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/google": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Staff sign-in with a Google ID token (AUTH_MODE=local, GOOGLE_CLIENT_ID set)",
+        "operationId": "google_login_api_v1_auth_google_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not a valid Google ID token for this client"
+          },
+          "403": {
+            "description": "Verified Google email is not an active staff account"
+          },
+          "404": {
+            "description": "Google sign-in is not configured"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/password": {
       "post": {
         "tags": [
@@ -10325,6 +10416,31 @@
         ],
         "title": "AuditOut"
       },
+      "AuthProvidersResponse": {
+        "properties": {
+          "password": {
+            "type": "boolean",
+            "title": "Password"
+          },
+          "google_client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Client Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password",
+          "google_client_id"
+        ],
+        "title": "AuthProvidersResponse"
+      },
       "BatteryGateIn": {
         "properties": {
           "language": {
@@ -12388,6 +12504,24 @@
         ],
         "title": "GateEvaluationIn"
       },
+      "GoogleLoginRequest": {
+        "properties": {
+          "credential": {
+            "type": "string",
+            "maxLength": 8192,
+            "minLength": 20,
+            "format": "password",
+            "title": "Credential",
+            "description": "Google ID token from Google Identity Services",
+            "writeOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "title": "GoogleLoginRequest"
+      },
       "GroupIndicatorOut": {
         "properties": {
           "study_id": {
@@ -14045,6 +14179,11 @@
               }
             ],
             "title": "Kiosk Id"
+          },
+          "password_change_required": {
+            "type": "boolean",
+            "title": "Password Change Required",
+            "default": false
           }
         },
         "type": "object",
@@ -17319,6 +17458,12 @@
           "expires_at": {
             "type": "integer",
             "title": "Expires At"
+          },
+          "password_change_required": {
+            "type": "boolean",
+            "title": "Password Change Required",
+            "description": "The account still uses an operator-issued initial password; prompt a change",
+            "default": false
           }
         },
         "type": "object",

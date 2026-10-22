@@ -4,7 +4,11 @@ import type { NextConfig } from 'next';
 /** Monorepo root: Turbopack must see frontend/packages/*, contracts/ and content/* (kiosk-game imports content JSON). */
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 
-/** FastAPI origin; the browser talks to it through same-origin rewrites (no CORS, no token in URLs). */
+/**
+ * FastAPI origin; the browser talks to it through same-origin rewrites (no CORS, no token in URLs). On
+ * Vercel production this is the EC2 API (API_PROXY_TARGET=https://52-66-109-32.sslip.io), so the browser
+ * only ever talks to the Vercel origin and Vercel forwards `/api/v1/*` server side.
+ */
 const apiProxyTarget = (process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000').replace(
   /\/+$/,
   '',
@@ -19,6 +23,28 @@ const isProduction = process.env.NODE_ENV === 'production';
 const demoMode = ['1', 'true', 'yes'].includes(
   (process.env.NEXT_PUBLIC_DEMO_MODE ?? '').trim().toLowerCase(),
 );
+
+// A Vercel build without demo mode must know where the API is; the localhost default would silently break
+// every /api/v1 call in production.
+if (process.env.VERCEL && !demoMode && !process.env.API_PROXY_TARGET) {
+  throw new Error('API_PROXY_TARGET must be set for a Vercel build with NEXT_PUBLIC_DEMO_MODE=0');
+}
+if (!demoMode && process.env.VERCEL && !apiProxyTarget.startsWith('https://')) {
+  throw new Error('API_PROXY_TARGET must be an https:// origin on Vercel');
+}
+const authMode = (process.env.NEXT_PUBLIC_AUTH_MODE ?? 'dev').trim().toLowerCase() || 'dev';
+if (process.env.VERCEL && !demoMode && authMode === 'dev') {
+  throw new Error(
+    'Set NEXT_PUBLIC_AUTH_MODE to "local" or "oidc" for a Vercel build without demo mode',
+  );
+}
+
+/**
+ * Google Identity Services (the "Sign in with Google" button on /login) opens a popup and checks the page
+ * origin, which `Cross-Origin-Opener-Policy: same-origin` and `Referrer-Policy: no-referrer` break. Only
+ * /login relaxes them, and only when Google sign-in is configured.
+ */
+const googleSignIn = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '').trim() !== '';
 
 /**
  * `output: 'standalone'` is only for the Docker image (infra/docker/web.Dockerfile sets
@@ -88,7 +114,20 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      ...(googleSignIn
+        ? [
+            {
+              source: '/login',
+              headers: [
+                { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+                { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+              ],
+            },
+          ]
+        : []),
+    ];
   },
 };
 

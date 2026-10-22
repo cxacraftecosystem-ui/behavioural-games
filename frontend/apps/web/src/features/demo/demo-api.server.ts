@@ -152,6 +152,7 @@ export async function handleDemoRequest(
       studies: ['*'],
       permissions,
       kiosk_id: null,
+      password_change_required: false,
     });
   }
 

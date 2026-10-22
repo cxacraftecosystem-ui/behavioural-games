@@ -11,6 +11,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { toast } from 'sonner';
 import { type ApiClient, createApiClient, unwrap } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import type { DevLoginRole } from '@/lib/api/types';
@@ -44,13 +45,26 @@ export interface AuthContextValue {
   readonly error: unknown;
   /** Retry loading the principal after an `error` status. */
   retry(): void;
+  /** Session expiry (epoch seconds), or null when signed out. Staff tokens are not refreshable. */
+  readonly expiresAt: number | null;
+  /** The account still uses an operator-issued initial password (AUTH_MODE=local). */
+  readonly passwordChangeRequired: boolean;
   signInDev(input: DevSignInInput): Promise<void>;
+  /** AUTH_MODE=local: username or email + password (`POST /api/v1/auth/login`). */
+  signInPassword(username: string, password: string): Promise<void>;
+  /** AUTH_MODE=local with Google configured: a Google Identity Services ID token. */
+  signInGoogle(credential: string): Promise<void>;
+  /** AUTH_MODE=local: change the signed-in user's password (`POST /api/v1/auth/password`). */
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
   /** Demo mode only: start a client-side demo session (no credentials, synthetic data only). */
   signInDemo(role: DemoRole): void;
   signInOidc(returnTo: string): Promise<void>;
   completeOidc(callbackUrl: string): Promise<string>;
   signOut(reason?: SignOutReason): Promise<void>;
 }
+
+/** Warn this long before the session expires. */
+const EXPIRY_WARNING_SECONDS = 5 * 60;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -162,6 +176,25 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [rt, token, signOut]);
 
+  // Staff tokens cannot be refreshed (the API issues fixed-lifetime tokens), so warn shortly before
+  // the session ends; the user signs in again to continue.
+  useEffect(() => {
+    if (!token) return;
+    const session = rt.store.get();
+    if (!session) return;
+    const ms =
+      (session.expiresAt - EXPIRY_SKEW_SECONDS - EXPIRY_WARNING_SECONDS) * 1000 - Date.now();
+    if (ms <= 0) return;
+    const timer = window.setTimeout(() => {
+      toast.warning('Your session ends in 5 minutes', {
+        id: 'session-expiry',
+        description: 'Save your work. You will need to sign in again to continue.',
+        duration: 60_000,
+      });
+    }, ms);
+    return () => window.clearTimeout(timer);
+  }, [rt, token]);
+
   const me = useQuery({
     queryKey: queryKeys.me(token ?? null),
     queryFn: () => unwrap(rt.api.GET('/api/v1/auth/me')),
@@ -171,6 +204,11 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
   });
 
   const principal = useMemo(() => (me.data ? principalFromMe(me.data) : null), [me.data]);
+  const passwordChangeRequired = me.data?.password_change_required === true;
+  const expiresAt = useMemo(
+    () => (token ? (rt.store.get()?.expiresAt ?? null) : null),
+    [rt, token],
+  );
 
   const meError = me.error instanceof ApiError && me.error.isUnauthorized ? null : me.error;
 
@@ -202,6 +240,44 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       queryClient.clear();
       setSignOutReason(null);
       rt.store.set({ accessToken: res.access_token, expiresAt: res.expires_at, provider: 'dev' });
+    },
+    [rt, queryClient],
+  );
+
+  const signInPassword = useCallback(
+    async (username: string, password: string) => {
+      const res = await unwrap(
+        rt.api.POST('/api/v1/auth/login', { body: { username: username.trim(), password } }),
+      );
+      queryClient.clear();
+      setSignOutReason(null);
+      rt.store.set({ accessToken: res.access_token, expiresAt: res.expires_at, provider: 'local' });
+    },
+    [rt, queryClient],
+  );
+
+  const signInGoogle = useCallback(
+    async (credential: string) => {
+      const res = await unwrap(rt.api.POST('/api/v1/auth/google', { body: { credential } }));
+      queryClient.clear();
+      setSignOutReason(null);
+      rt.store.set({
+        accessToken: res.access_token,
+        expiresAt: res.expires_at,
+        provider: 'google',
+      });
+    },
+    [rt, queryClient],
+  );
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      await unwrap(
+        rt.api.POST('/api/v1/auth/password', {
+          body: { current_password: currentPassword, new_password: newPassword },
+        }),
+      );
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
     [rt, queryClient],
   );
@@ -256,7 +332,12 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       signOutReason,
       error: meError,
       retry,
+      expiresAt,
+      passwordChangeRequired,
       signInDev,
+      signInPassword,
+      signInGoogle,
+      changePassword,
       signInDemo,
       signInOidc,
       completeOidc,
@@ -271,7 +352,12 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       signOutReason,
       meError,
       retry,
+      expiresAt,
+      passwordChangeRequired,
       signInDev,
+      signInPassword,
+      signInGoogle,
+      changePassword,
       signInDemo,
       signInOidc,
       completeOidc,

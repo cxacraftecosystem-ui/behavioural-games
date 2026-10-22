@@ -2,20 +2,24 @@
 
 import {
   AlertTriangleIcon,
+  EyeIcon,
+  EyeOffIcon,
   FlaskConicalIcon,
   KeyRoundIcon,
   Loader2Icon,
+  LockKeyholeIcon,
   LogInIcon,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useEffect, useId, useState } from 'react';
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { errorMessage } from '@/lib/api/errors';
+import { ApiError, errorMessage } from '@/lib/api/errors';
 import type { DevLoginRole } from '@/lib/api/types';
 import { useAuth } from '@/lib/auth/auth-context';
 import { safeReturnTo } from '@/lib/auth/oidc';
@@ -39,6 +43,9 @@ export function LoginPanel() {
     signInDev,
     signInDemo,
     signInOidc,
+    signInPassword,
+    signInGoogle,
+    passwordChangeRequired,
   } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -48,15 +55,61 @@ export function LoginPanel() {
   const [studies, setStudies] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const subId = useId();
   const studiesId = useId();
+  const usernameId = useId();
+  const passwordId = useId();
 
-  // Once signed in, continue to `next` if permitted, else to the first permitted page.
+  // Once signed in, continue to `next` if permitted, else to the first permitted page. Accounts that
+  // still use an operator-issued initial password go to the change-password screen first.
   useEffect(() => {
     if (status !== 'authenticated') return;
     const target = safeReturnTo(next, '');
-    router.replace(target && canOpen(principal, target) ? target : defaultLanding(principal));
-  }, [status, principal, next, router]);
+    const destination = target && canOpen(principal, target) ? target : defaultLanding(principal);
+    router.replace(
+      passwordChangeRequired
+        ? `/account/password?initial=1&next=${encodeURIComponent(destination)}`
+        : destination,
+    );
+  }, [status, principal, next, router, passwordChangeRequired]);
+
+  const onPasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!username.trim()) return setError('Enter your email or username.');
+    if (!password) return setError('Enter your password.');
+    setBusy(true);
+    try {
+      await signInPassword(username, password);
+      setPassword('');
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 422
+          ? 'Check the email or username and password format.'
+          : errorMessage(err),
+      );
+      setBusy(false);
+    }
+  };
+
+  const onGoogleCredential = async (credential: string) => {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInGoogle(credential);
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 403
+          ? 'This Google account is not registered for staff access. Ask an administrator to add your email, or sign in with your password.'
+          : errorMessage(err),
+      );
+      setBusy(false);
+    }
+  };
 
   const toggleRole = (role: DevLoginRole, on: boolean) =>
     setRoles((current) =>
@@ -153,6 +206,90 @@ export function LoginPanel() {
                 <span className="text-xs font-normal opacity-80">{ROLE_DESCRIPTIONS[role]}</span>
               </Button>
             ))}
+          </section>
+        )}
+
+        {!DEMO_MODE && config?.mode === 'local' && (
+          <section aria-label="Staff sign-in" className="space-y-4" data-testid="password-sign-in">
+            <form onSubmit={onPasswordSubmit} className="space-y-4" noValidate>
+              <div className="grid gap-2">
+                <Label htmlFor={usernameId}>Email or username</Label>
+                <Input
+                  id={usernameId}
+                  name="username"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="name@example.org"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={busy}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={passwordId}>Password</Label>
+                <div className="relative">
+                  <Input
+                    id={passwordId}
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+                    disabled={busy}
+                    className="pr-10"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </Button>
+                </div>
+                {capsLock && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                    Caps Lock is on.
+                  </p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={busy} data-testid="sign-in-submit">
+                {busy ? <Loader2Icon className="animate-spin" /> : <LogInIcon />}
+                Sign in
+              </Button>
+            </form>
+            {config.googleClientId && (
+              <>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  or
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <GoogleSignInButton
+                  clientId={config.googleClientId}
+                  disabled={busy}
+                  onCredential={(c) => void onGoogleCredential(c)}
+                  onError={setError}
+                />
+              </>
+            )}
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <LockKeyholeIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>
+                Staff accounts are issued by a system administrator. Five failed attempts lock an
+                account for 15 minutes. Sessions last 8 hours.
+              </span>
+            </p>
           </section>
         )}
 

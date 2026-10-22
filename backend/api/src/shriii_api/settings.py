@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     oidc_algorithms: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["RS256"])
     oidc_roles_claim: str = "roles"
     oidc_studies_claim: str = "studies"
+    google_client_id: str | None = None
+    """OAuth client id of the web app for Google Sign-In (ID-token flow, ``POST /api/v1/auth/google``). Unset =
+    Google sign-in disabled (404). Only ``AUTH_MODE=local``; Google authenticates, roles come from the staff
+    account whose username equals the verified email. No client secret is needed."""
+    google_jwks_url: str = "https://www.googleapis.com/oauth2/v3/certs"
 
     # --- CORS (frontend/apps/web and frontend/apps/kiosk) ---
     api_cors_origins: Annotated[list[str], NoDecode] = Field(
@@ -113,6 +118,13 @@ class Settings(BaseSettings):
     # --- Provenance ---
     git_sha: str | None = None
     """Source revision recorded on every validation result (``GIT_SHA``; read from git in dev checkouts)."""
+
+    @field_validator("google_client_id", mode="before")
+    @classmethod
+    def _blank_is_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value.strip() if isinstance(value, str) else value
 
     @field_validator("api_cors_origins", "oidc_algorithms", mode="before")
     @classmethod

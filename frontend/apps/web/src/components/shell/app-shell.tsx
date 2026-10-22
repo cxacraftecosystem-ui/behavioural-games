@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { breadcrumbs } from '@/lib/nav';
 import { DemoBanner } from './demo-banner';
+import { PasswordChangeBanner } from './password-change-banner';
 import { SidebarNav } from './sidebar-nav';
 import { StudySwitcher } from './study-switcher';
 import { ThemeToggle } from './theme-toggle';
@@ -89,6 +90,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
       </Sheet>
       <div className="flex min-w-0 flex-1 flex-col">
         <DemoBanner />
+        <PasswordChangeBanner />
         <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b bg-background/90 px-3 backdrop-blur sm:px-5">
           <Button
             variant="ghost"

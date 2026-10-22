@@ -7,7 +7,7 @@ instance pulls from ECR with its instance role. Every secret
 lives in AWS SSM Parameter Store; none is in this repository, in an image, or in user data.
 
 ```
-Vercel web app ──HTTPS──▶ Caddy :443 (52-66-109-32.sslip.io, HSTS, size limits, security headers)
+browser ──▶ Vercel web app ──HTTPS (server-side rewrite /api/v1/*)──▶ Caddy :443 (52-66-109-32.sslip.io, HSTS, size limits, security headers)
 kiosks (device tokens) ─▶   └─▶ api:8000  (FastAPI, ENV=prod, AUTH_MODE=local)
                               worker      (Postgres job queue)        ──TLS──▶ Supabase session pooler :5432
                                                                                (research DB + identity vault)
@@ -50,24 +50,42 @@ Non-secret production settings are in `infra/ec2/api.prod.env`: `ENV=prod`, `AUT
 With `ENV=prod` the API refuses dev login, refuses plaintext (`none_dev`) chunks, and will not start unless
 every key is supplied.
 
-**CORS.** The Vercel project `behavioural-games` (scope `cxacraftecosystem-8028`) did not exist yet, so the
-API allows `https://behavioural-games.vercel.app` plus the pattern
-`API_CORS_ORIGIN_REGEX=https://behavioural-games[a-z0-9-]*\.vercel\.app`, which also matches the team's preview
-URLs (`behavioural-games-<hash>-cxacraftecosystem-8028s-projects.vercel.app`). The pattern would also match an
-unrelated Vercel project whose name starts with `behavioural-games`. Auth uses bearer tokens, not cookies, so
-this does not expose sessions, but once the production domain is known, set `API_CORS_ORIGINS` to the exact
-origin(s) (and the custom domain), narrow or drop the regex, and redeploy.
+**CORS.** Browsers normally never call this host directly: the web app proxies `/api/v1/*` server side
+([Web app on Vercel](#web-app-on-vercel)), so every browser request is same-origin and CORS does not apply. For
+direct calls the API still allows exactly `API_CORS_ORIGINS=https://behavioural-games.vercel.app` plus
+`API_CORS_ORIGIN_REGEX=https://behavioural-games-[a-z0-9-]+-cxacraftecosystem-8028s-projects\.vercel\.app`,
+which matches only this team's preview URLs (`behavioural-games-<hash>-…` and `behavioural-games-git-<branch>-…`).
+Starlette full-matches the pattern, so suffixes such as `….vercel.app.evil.example` are refused
+(`backend/api/tests/test_prod_cors.py`). One gap remains: another Vercel team could name a project
+`behavioural-games-x-cxacraftecosystem-8028s-projects` and get a matching production URL. Auth uses bearer
+tokens, not cookies, so a matching origin still cannot ride a user's session. Add a custom domain to
+`API_CORS_ORIGINS` when one exists.
 
 **Staff accounts (`AUTH_MODE=local`).** There is no Cognito/OIDC provider yet, so staff accounts are stored in
-`governance.staff_users` (migration 0006) with scrypt password hashes. `POST /api/v1/auth/login`
-(`{"username","password"}`) returns a bearer JWT (HS256, `LOCAL_JWT_SECRET`, 8 h). Five failed attempts lock an
-account for 15 minutes. `POST /api/v1/auth/password` changes the caller's password. Accounts are created or
-reset only from the CLI (`shriii-api create-staff-user <username> --roles ... [--reset]`, password on stdin),
-never over HTTP. To move to OIDC later, set `AUTH_MODE=oidc`, `OIDC_JWKS_URL`, `JWT_ISSUER` and `JWT_AUDIENCE`;
-the staff table then goes unused.
+`governance.staff_users` (migrations 0006 and 0007) with scrypt password hashes. The web app's sign-in page
+(`/login`) takes an email or username and password; `POST /api/v1/auth/login` (`{"username","password"}`)
+returns a bearer JWT (HS256, `LOCAL_JWT_SECRET`, 8 h) and `password_change_required`. Five failed attempts lock
+an account for 15 minutes. `POST /api/v1/auth/password` (web: user menu, Change password, `/account/password`)
+changes the caller's password and clears the change prompt. Accounts are created or reset only from the CLI
+(`shriii-api create-staff-user <username> --roles ... [--studies ...] [--reset] [--no-change-prompt]`, password on
+stdin), never over HTTP. A CLI-issued password is marked as an initial password (`must_change_password`), so the
+web app sends the user to the change-password screen after sign-in and shows a banner until it is changed;
+`--no-change-prompt` is only for service accounts whose password lives in SSM. Migration 0007 marked every
+existing account. Tokens cannot be refreshed: the web app shows when the session ends, warns 5 minutes before
+the 8-hour token expires and then signs the user out. Sign-out drops the token and all cached data in the tab.
+`GET /api/v1/auth/providers` reports which sign-in methods are enabled. To move to OIDC later, set
+`AUTH_MODE=oidc`, `OIDC_JWKS_URL`, `JWT_ISSUER` and `JWT_AUDIENCE`; the staff table then goes unused.
 
-The web app's login page currently offers dev and OIDC modes only. Until it gains a password form against
-`/api/v1/auth/login`, staff use the API directly (for example from `/docs`).
+**Google sign-in (off until configured).** `POST /api/v1/auth/google` (`{"credential": "<Google ID token>"}`)
+is enabled only when `GOOGLE_CLIENT_ID` is set, which `render-env.sh` fills from the optional SSM parameter
+`/shriii/prod/google_client_id`. It verifies the ID token against Google's JWKS (RS256), requires `iss`
+`accounts.google.com` or `https://accounts.google.com`, `aud` equal to `GOOGLE_CLIENT_ID`, an unexpired `exp` and
+`email_verified` true (`shriii_api/auth/google.py`). It then signs the caller in **only** when the verified email
+equals the username of an existing, active staff account; roles and study scope come from that record. Unknown
+or disabled emails get 403 and an `auth.login_google` audit row with outcome `denied`; no account is ever
+created. The web app uses the Google Identity Services ID-token flow, which needs only the client id: **no client
+secret is used or stored**, and no redirect URI is involved. Steps are under
+[Turning on Google sign-in](#turning-on-google-sign-in).
 
 ## SSM parameters (`/shriii/prod/`, SecureString)
 
@@ -77,9 +95,11 @@ The web app's login page currently offers dev and OIDC modes only. Until it gain
 | `db_password`, `db_app_password`, `identity_db_password` | `bootstrap_roles.py` | operator material (not loaded into containers) |
 | `LOCAL_JWT_SECRET` (48 bytes), `PID_HMAC_PEPPER`, `SESSION_KEY_KEK`, `BACKEND_X25519_PRIVATE_KEY`, `RELEASE_PACK_SIGNING_KEY`, `IDENTITY_VAULT_KEY` (32 bytes each, base64) | `infra/ec2/init-secrets.sh` | env vars of the same name |
 | `admin_initial_password` | `init-secrets.sh` | first admin password, read by `create-admin.sh` |
+| `smoke_test_password` | operator (generated) | password of the smoke-test account `smoke-test@shriii.local` used by the live Playwright check |
+| `google_client_id` (optional) | operator, from Google Cloud Console | rendered as `GOOGLE_CLIENT_ID`; unset = Google sign-in off |
 
 `render-env.sh` copies every upper-case name under the prefix into `/etc/shriii/api.env` at each deploy and
-skips lower-case names. The instance role can read the prefix but cannot write anything.
+skips lower-case names, except `google_client_id`, which it maps to `GOOGLE_CLIENT_ID`. The instance role can read the prefix but cannot write anything.
 
 ## Operations
 
@@ -128,17 +148,29 @@ and belongs to the study `synthetic-smoke` ("SYNTHETIC SMOKE TEST").
 
 `synthetic.sh demo` runs `shriii-api demo-pipeline` into a study whose id starts with `synthetic-` and whose
 name starts with "SYNTHETIC DEMO", so the research dashboards have data. The default size is the CI size (24
-players per language + 8 retests: about 56 sessions, 68k raw events, 230 MB). **The Supabase project is on the
-free plan, whose 500 MB database cap turns the database read-only when exceeded**; the `--fast` preset (about
-470k events, 1.4 GB) did exactly that on 2026-10-22 and the synthetic raw data had to be truncated. Run larger
-demos only after moving to a paid plan, and watch the size (`select pg_size_pretty(pg_database_size('postgres'))`)
-before real data collection: raw events cost about 3 KB each including indexes. The pipeline drives the API
+players per language + 8 retests: about 56 sessions, 68k raw events, 230 MB). The Supabase organisation is on
+the **Pro plan with an 8 GB disk** ([supabase.md](supabase.md#plan-and-disk)). During the `--fast` preset (about
+470k events, 1.4 GB) on 2026-10-22 the database nevertheless turned read-only at about 838 MB, far below the
+disk size, and the synthetic raw data had to be truncated. **The cause is unexplained.** An earlier version of
+this document blamed a 500 MB free-plan cap; that was wrong, because the project is not on the free plan. Until
+the cause is known, run only the default size, and check the database size
+(`select pg_size_pretty(pg_database_size('postgres'))`) and the Supabase disk usage before larger runs and before
+real data collection: raw events cost about 3 KB each including indexes. The pipeline drives the API
 in-process, so it runs in a one-off container with `ENV=dev`/`AUTH_MODE=dev` and a throwaway dev secret; the
 public API stays `ENV=prod`. The worker is paused during the run. Afterwards the cleanup step revokes the
 simulator kiosk (`kiosk-sim-01`) and undoes the dev-only instrument approvals the pipeline records (synthetic
 "granted" permissions and dev-approved language versions), so no instrument looks licensed for real use. The
 synthetic chunks are stored as `none_dev` plaintext: they are simulated players, not participants. Remove a
 synthetic study through the normal erasure/retention paths, or leave it as a labelled demo.
+
+### Smoke-test staff account
+
+`smoke-test@shriii.local` is a service account for the live end-to-end check (role `researcher`, study scope
+limited to the synthetic demo study, so it cannot see any other study). Its password is generated on the operator
+machine, stored only in `/shriii/prod/smoke_test_password`, passed to `create-staff-user` on stdin through SSM
+(never in argv or command output), and created with `--no-change-prompt`. The researcher role can still write
+within that synthetic study; the check only reads. Disable the account when it is not needed:
+`UPDATE governance.staff_users SET disabled = true WHERE username = 'smoke-test@shriii.local'`.
 
 ### Database network access
 
@@ -159,6 +191,54 @@ needs its IP added first.
 | Migrations on Supabase | research `0006`, identity `i0002` (head) |
 | Sealed UploadBatch over HTTPS | 1,190 events accepted, visible in `kiosk_raw.events` on Supabase; the worker container ran `trial_eligibility` and `feature_extraction` (both succeeded) |
 | Demo pipeline (`synthetic-demo-20261022`) | 48 synthetic participants, 56 sessions, 68,250 events accepted; every hard check passed (events accepted, no failed job, analyses succeeded, model trained with holdout, gates and report fail closed); soft check `planted_dif_recovered` not met at this sample size, as expected; cleanup revoked `kiosk-sim-01` and restored 11 instrument permissions and 30 language versions |
+
+## Web app on Vercel
+
+Vercel project `behavioural-games` (scope `cxacraftecosystem-8028s-projects`, production
+`https://behavioural-games.vercel.app`, Git-connected: a merge to `main` deploys production).
+
+- **Production uses the live API.** `next.config.ts` rewrites `/api/v1/*`, `/healthz` and `/readyz` to
+  `API_PROXY_TARGET` on the server, so the browser only talks to the Vercel origin, bearer tokens never cross
+  origins and CORS does not apply. A Vercel build without demo mode fails fast if `API_PROXY_TARGET` is missing
+  or not `https://`, or if `NEXT_PUBLIC_AUTH_MODE` is still `dev`.
+- **Previews stay self-contained.** Preview deployments keep `NEXT_PUBLIC_DEMO_MODE=1` (in-app demo API with
+  synthetic fixtures, writes refused), so a pull request never touches the production API or database.
+- **The public `/kiosk` never uploads.** The web kiosk sends events only when the build is configured as a
+  registered kiosk device (`NEXT_PUBLIC_KIOSK_API_BASE` **and** `NEXT_PUBLIC_KIOSK_DEVICE_ID`), which production
+  does not set. The public website is not a registered kiosk: nobody supervises consent there, visitors are not
+  enrolled in a study, and a kiosk device token can never be embedded in a public JavaScript bundle. Research
+  data comes only from registered kiosks (`frontend/apps/kiosk-electron`). The API would also refuse an upload
+  without a device token.
+
+| Variable | Production | Preview |
+|---|---|---|
+| `NEXT_PUBLIC_DEMO_MODE` | `0` | `1` |
+| `NEXT_PUBLIC_AUTH_MODE` | `local` | unset (demo sign-in) |
+| `API_PROXY_TARGET` | `https://52-66-109-32.sslip.io` | unset |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | unset until Google is configured | unset |
+
+Change them with `vercel env add <NAME> production` or `vercel env rm <NAME> production` from the repository
+root (it is linked), then redeploy (merge to `main`, or `vercel deploy --prod` from the root). `NEXT_PUBLIC_*`
+values and the rewrites are fixed at build time, so every change needs a new build.
+
+### Turning on Google sign-in
+
+1. Google Cloud Console, APIs & Services, OAuth consent screen: user type External, app name, support email;
+   scopes `openid`, `email` and `profile` only.
+2. Credentials, Create credentials, OAuth client ID, application type **Web application**, name for example
+   `SHRIII web (behavioural-games)`.
+   - Authorized JavaScript origins: `https://behavioural-games.vercel.app` (add `http://localhost:3000` only for
+     local testing).
+   - Authorized redirect URIs: none. The ID-token popup flow does not use one. If a redirect flow is ever added,
+     the URI would be `https://behavioural-games.vercel.app/auth/google/callback`.
+   - Google also shows a client secret. It is not used; do not store it anywhere.
+3. `aws ssm put-parameter --name /shriii/prod/google_client_id --type String --value <client id>` (a client id
+   is not secret), then redeploy the backend (`deploy.sh`), which renders `GOOGLE_CLIENT_ID`.
+4. `vercel env add NEXT_PUBLIC_GOOGLE_CLIENT_ID production` with the same id, then redeploy production. The
+   button appears on `/login`, which then relaxes `Cross-Origin-Opener-Policy` to `same-origin-allow-popups` and
+   `Referrer-Policy` to `strict-origin-when-cross-origin`, as Google Identity Services requires.
+5. Only staff whose account username is their Google email can use the button. Create such accounts with
+   `create-staff-user <email> --roles ...`.
 
 ## Rotating secrets
 
