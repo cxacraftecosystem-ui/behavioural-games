@@ -357,6 +357,12 @@ jobs:
             tofu -chdir="$root" validate -no-color
             echo "::endgroup::"
           done
+      - name: EC2 deployment files (shellcheck, compose config, Caddyfile)
+        run: |
+          shellcheck -x infra/ec2/*.sh
+          sudo install -d -m 700 /etc/shriii && sudo touch /etc/shriii/api.env
+          SITE_HOST=ci.example.invalid sudo -E docker compose -f infra/ec2/docker-compose.prod.yml --profile ops config --quiet
+          docker run --rm -e SITE_HOST=ci.example.invalid -v "$PWD/infra/ec2/Caddyfile:/etc/caddy/Caddyfile:ro"             caddy:2.10 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Region policy (PLT-05 - India regions only)
         run: |
           found=$(grep -rhoE '\b(us|eu|ap|sa|ca|me|af|il|mx)-(north|south|east|west|central|northeast|southeast|gov-east|gov-west)-[0-9]\b' infra/tofu --include='*.tf' --include='*.tfvars*' | sort -u)

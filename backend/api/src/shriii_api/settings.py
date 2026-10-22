@@ -39,12 +39,20 @@ class Settings(BaseSettings):
     db_pool_size: int = 10
     db_echo: bool = False
 
-    # --- Auth (OIDC-ready JWT + dev login) ---
-    auth_mode: Literal["dev", "oidc"] = "dev"
+    # --- Auth (OIDC-ready JWT, self-hosted staff login, dev login) ---
+    auth_mode: Literal["dev", "oidc", "local"] = "dev"
+    """``oidc``: external provider (JWKS). ``local``: staff accounts in ``governance.staff_users`` with
+    password login (``POST /api/v1/auth/login``), HS256 tokens signed with ``LOCAL_JWT_SECRET``; for
+    deployments without an identity provider. ``dev``: dev login, ENV=dev/test only."""
     dev_jwt_secret: SecretStr = SecretStr("change-me-dev-only")
     dev_jwt_ttl_minutes: int = 480
     jwt_issuer: str = "shriii-dev"
     jwt_audience: str = "shriii-api"
+    local_jwt_secret: SecretStr | None = None
+    """HS256 signing key for ``AUTH_MODE=local`` (at least 32 bytes; generated and held in SSM)."""
+    local_jwt_ttl_minutes: int = 480
+    local_login_max_failures: int = 5
+    local_login_lockout_minutes: int = 15
     oidc_jwks_url: str | None = None
     oidc_algorithms: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["RS256"])
     oidc_roles_claim: str = "roles"
@@ -54,6 +62,8 @@ class Settings(BaseSettings):
     api_cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://localhost:3000"]
     )
+    api_cors_origin_regex: str | None = None
+    """Optional full-match regex for extra allowed origins (e.g. the Vercel preview and production URLs)."""
     public_base_url: str = "http://localhost:3000"
 
     # --- Keys (KMS-held in production; dev values are derived from the dev secret) ---
@@ -135,6 +145,10 @@ class Settings(BaseSettings):
             if secret == "change-me-dev-only":
                 # The dev secret is unused in oidc mode, but refuse the default value outright.
                 self.dev_jwt_secret = SecretStr(hashlib.sha256(secret.encode()).hexdigest() + "-disabled")
+        if self.auth_mode == "local":
+            key = self.local_jwt_secret.get_secret_value() if self.local_jwt_secret else ""
+            if len(key.encode()) < 32:
+                raise ValueError("LOCAL_JWT_SECRET (at least 32 bytes) is required when AUTH_MODE=local")
         if self.auth_mode == "oidc" and not self.oidc_jwks_url:
             raise ValueError("OIDC_JWKS_URL is required when AUTH_MODE=oidc")
         return self

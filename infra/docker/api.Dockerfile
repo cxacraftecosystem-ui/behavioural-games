@@ -51,9 +51,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:${PYTHON_VERSION}-slim-trixie AS runtime
 ARG APP_UID=10001
 ARG APP_GID=10001
+# Source revision recorded in validation provenance (set by .github/workflows/images.yml).
+ARG GIT_SHA=""
 LABEL org.opencontainers.image.title="shriii-api" \
       org.opencontainers.image.description="SHRIII behavioural games backend (FastAPI + job worker)" \
-      org.opencontainers.image.source="https://github.com/shriii/behavioural-games" \
+      org.opencontainers.image.source="https://github.com/cxacraftecosystem-ui/behavioural-games" \
       org.opencontainers.image.licenses="UNLICENSED"
 
 RUN groupadd --system --gid "${APP_GID}" app \

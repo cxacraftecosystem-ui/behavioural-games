@@ -93,6 +93,8 @@ class DemoConfig:
     n_boot: int = 500
     workers: int = 4
     study_id: str | None = None
+    study_name: str | None = None
+    """Display name of the demo study (default: the seed's synthetic demo name)."""
     skip_ingestion: bool = False
     """Resume ``study_id``: skip simulation, upload, linkage and per-session scoring."""
 
@@ -1127,7 +1129,7 @@ def run_demo_pipeline(settings: Settings, config: DemoConfig, *, migrate_first: 
             migrate(settings)
     with clock.step("seed"), session_scope() as db:
         summary["seed_reference"] = seed_svc.seed_reference(db, ACTOR)
-        summary["demo_study"] = seed_svc.seed_demo_study(db, ACTOR, study_id)
+        summary["demo_study"] = seed_svc.seed_demo_study(db, ACTOR, study_id, name=config.study_name)
         token = _device_token(db)
         plans = db.execute(
             select(func.count()).select_from(AnalysisPlan).where(AnalysisPlan.study_id == study_id)

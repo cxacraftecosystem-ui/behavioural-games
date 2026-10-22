@@ -2,6 +2,8 @@
 
 * ``AUTH_MODE=oidc``: RS256/ES256 tokens verified against the provider JWKS (issuer + audience),
   roles/studies read from configurable claims.
+* ``AUTH_MODE=local``: HS256 tokens signed with ``LOCAL_JWT_SECRET``, issued by ``POST /api/v1/auth/login``
+  for staff accounts in ``governance.staff_users`` (deployments without an identity provider).
 * ``AUTH_MODE=dev`` (only when ``ENV`` is dev/test): HS256 tokens signed with ``DEV_JWT_SECRET``,
   issued by ``POST /api/v1/auth/dev-login``.
 * Kiosk devices authenticate with an opaque device token (``kdt_...``) looked up by digest.
@@ -52,6 +54,25 @@ def issue_dev_token(
     return token, exp
 
 
+def issue_local_token(settings: Settings, sub: str, roles: list[str], studies: list[str]) -> tuple[str, int]:
+    """Sign a staff token after a successful password login (``AUTH_MODE=local`` only)."""
+    if settings.auth_mode != "local" or settings.local_jwt_secret is None:
+        raise AuthError("password login is disabled")
+    now = int(time.time())
+    exp = now + 60 * settings.local_jwt_ttl_minutes
+    claims = {
+        "sub": sub,
+        "roles": roles,
+        "studies": studies,
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+        "iat": now,
+        "nbf": now,
+        "exp": exp,
+    }
+    return jwt.encode(claims, settings.local_jwt_secret.get_secret_value(), algorithm="HS256"), exp
+
+
 def _roles_from(claims: dict[str, Any], claim: str) -> frozenset[Role]:
     raw = claims.get(claim, [])
     if isinstance(raw, str):
@@ -73,6 +94,17 @@ def verify_jwt(settings: Settings, token: str) -> Principal:
             claims = jwt.decode(
                 token,
                 settings.dev_jwt_secret.get_secret_value(),
+                algorithms=["HS256"],
+                audience=settings.jwt_audience,
+                issuer=settings.jwt_issuer,
+                options={"require": ["exp", "sub", "iss", "aud"]},
+            )
+            roles_claim, studies_claim = "roles", "studies"
+        elif settings.auth_mode == "local":
+            assert settings.local_jwt_secret is not None
+            claims = jwt.decode(
+                token,
+                settings.local_jwt_secret.get_secret_value(),
                 algorithms=["HS256"],
                 audience=settings.jwt_audience,
                 issuer=settings.jwt_issuer,

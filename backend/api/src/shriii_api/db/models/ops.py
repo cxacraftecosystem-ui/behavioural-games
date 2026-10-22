@@ -119,6 +119,28 @@ class Kiosk(Base, CreatedAtMixin):
     revoked_at: Mapped[datetime | None] = mapped_column()
 
 
+class StaffUser(Base, CreatedAtMixin):
+    """Staff account for ``AUTH_MODE=local`` (deployments without an OIDC provider).
+
+    Only a scrypt hash of the password is stored. Accounts are created or reset with
+    ``shriii-api create-staff-user`` (password read from stdin), never through the HTTP API.
+    """
+
+    __tablename__ = "staff_users"
+    __table_args__ = {"schema": GOVERNANCE}
+
+    username: Mapped[str] = mapped_column(String(128), primary_key=True)
+    password_hash: Mapped[str] = mapped_column(String(512))
+    roles: Mapped[list[str]] = mapped_column(default=list)
+    studies: Mapped[list[str]] = mapped_column(default=list)
+    disabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    failed_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column()
+    password_changed_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    last_login_at: Mapped[datetime | None] = mapped_column()
+    created_by: Mapped[str] = mapped_column(String(256))
+
+
 class Deployment(Base, CreatedAtMixin):
     __tablename__ = "deployments"
     __table_args__ = {"schema": GOVERNANCE}

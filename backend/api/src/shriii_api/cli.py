@@ -77,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--retests", "--retest", type=int, default=None, help="overrides the preset")
     p.add_argument("--seed", type=int, default=None, help="default: derived from the clock (a new study per run)")
     p.add_argument("--study-id", default=None)
+    p.add_argument("--study-name", default=None, help="display name of the demo study (default: synthetic demo)")
     p.add_argument("--workers", type=int, default=4, help="worker processes for the scoring and analysis jobs")
     p.add_argument("--models", default=",".join(("ridge", "elastic_net", "random_forest", "xgboost")))
     p.add_argument("--n-boot", type=int, default=None, help="overrides the preset")
@@ -92,6 +93,14 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("create-kiosk", help="Register a kiosk and print its device token")
     p.add_argument("kiosk_id")
     p.add_argument("--site", required=True)
+    p = sub.add_parser(
+        "create-staff-user",
+        help="Create (or --reset) a staff account for AUTH_MODE=local; the password is read from stdin",
+    )
+    p.add_argument("username")
+    p.add_argument("--roles", default="admin", help="comma-separated: admin, researcher, administrator, analyst")
+    p.add_argument("--studies", default="*", help="comma-separated study ids ('*' = all)")
+    p.add_argument("--reset", action="store_true", help="replace the password and roles of an existing account")
     p = sub.add_parser("dev-token", help="Print a dev JWT (ENV=dev/test only)")
     p.add_argument("--sub", default="dev-admin")
     p.add_argument("--roles", default="admin", help="comma-separated")
@@ -157,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
             languages=languages,
             seed=args.seed,
             study_id=args.study_id,
+            study_name=args.study_name,
             workers=max(1, args.workers),
             models=tuple(x.strip() for x in args.models.split(",") if x.strip()),
             skip_ingestion=args.skip_ingestion,
@@ -199,6 +209,26 @@ def main(argv: list[str] | None = None) -> int:
         with session_scope() as db:
             token = ensure_kiosk(db, args.kiosk_id, args.site)
         _print({"kiosk_id": args.kiosk_id, "device_token": token or "(already registered; rotate via the API)"})
+    elif args.cmd == "create-staff-user":
+        from shriii_api.db.session import session_scope  # noqa: PLC0415
+        from shriii_api.services.staff import upsert_staff_user  # noqa: PLC0415
+
+        password = sys.stdin.readline().rstrip("\r\n")
+        try:
+            with session_scope() as db:
+                result = upsert_staff_user(
+                    db,
+                    args.username,
+                    password,
+                    [r.strip() for r in args.roles.split(",") if r.strip()],
+                    studies=[x.strip() for x in args.studies.split(",") if x.strip()],
+                    actor="cli:create-staff-user",
+                    reset=args.reset,
+                )
+        except ValueError as exc:
+            sys.stderr.write(f"create-staff-user: {exc}\n")
+            return 2
+        _print(result)
     elif args.cmd == "dev-token":
         from shriii_api.auth.tokens import issue_dev_token  # noqa: PLC0415
 
