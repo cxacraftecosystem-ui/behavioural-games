@@ -18,6 +18,7 @@ coverage/
 .ruff_cache/
 .mypy_cache/
 test-results/
+visual-results/
 playwright-report/
 *.tsbuildinfo
 .vite/

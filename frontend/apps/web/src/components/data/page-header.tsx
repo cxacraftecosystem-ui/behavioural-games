@@ -82,7 +82,7 @@ export function Section({
   readonly className?: string;
 }) {
   return (
-    <section className={cn('space-y-3', className)}>
+    <section className={cn('min-w-0 space-y-3', className)}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h2 className="font-display text-lg font-semibold tracking-tight">{title}</h2>

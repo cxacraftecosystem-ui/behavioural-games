@@ -14,7 +14,8 @@ import { mockAdminApi } from '../src/features/admin/e2e/mock-admin-api';
 import { mockResearchApi } from '../src/features/research/e2e/mock-research-api';
 import { expect, mockApi, signIn, test } from './fixtures';
 
-const OUT = fileURLToPath(new URL('../test-results/visual/', import.meta.url));
+// Outside Playwright's outputDir: the next suite's run would empty test-results/.
+const OUT = fileURLToPath(new URL('../visual-results/', import.meta.url));
 mkdirSync(OUT, { recursive: true });
 
 const VIEWPORTS = [
@@ -55,9 +56,17 @@ async function expectNoHorizontalScroll(page: Page): Promise<void> {
     const doc = document.documentElement;
     const width = doc.clientWidth;
     const offenders: string[] = [];
+    const inScroller = (el: HTMLElement): boolean => {
+      for (let p = el.parentElement; p && p !== doc; p = p.parentElement) {
+        const o = getComputedStyle(p).overflowX;
+        if (o === 'auto' || o === 'scroll' || o === 'hidden') return true;
+      }
+      return false;
+    };
     for (const el of Array.from(document.querySelectorAll<HTMLElement>('main *'))) {
       const r = el.getBoundingClientRect();
-      if (r.right > width + 1 && getComputedStyle(el).position !== 'fixed') {
+      // Content inside its own horizontal scroller (a wide table) does not scroll the page.
+      if (r.right > width + 1 && getComputedStyle(el).position !== 'fixed' && !inScroller(el)) {
         const parent = el.parentElement?.getBoundingClientRect();
         // Report only the outermost element that overflows (its parent still fits).
         if (!parent || parent.right <= width + 1) {
@@ -90,15 +99,22 @@ for (const vp of VIEWPORTS) {
         await expectTheme(page, theme);
         // The one action colour, in both themes: a filled purple-700 button with white text.
         const submit = form.getByRole('button', { name: 'Sign in' });
+        // Compare painted pixels: Chromium serialises the same colour as oklch() or lab().
         const [actual, purple700] = await submit.evaluate((el) => {
-          const probe = document.createElement('span');
-          probe.style.backgroundColor = 'oklch(0.47 0.198 305)';
-          document.body.append(probe);
-          const want = getComputedStyle(probe).backgroundColor;
-          probe.remove();
-          return [getComputedStyle(el).backgroundColor, want];
+          const ctx = document.createElement('canvas').getContext('2d');
+          const rgb = (color: string): number[] => {
+            if (!ctx) return [];
+            ctx.clearRect(0, 0, 1, 1);
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, 1, 1);
+            return Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3));
+          };
+          return [rgb(getComputedStyle(el).backgroundColor), rgb('oklch(0.47 0.198 305)')];
         });
-        expect(actual).toBe(purple700);
+        expect(purple700).toHaveLength(3);
+        actual?.forEach((channel, i) => {
+          expect(Math.abs(channel - (purple700?.[i] ?? -99))).toBeLessThanOrEqual(2);
+        });
         await capture(page, `${vp.name}-${theme}-sign-in`);
         await expectAccessible(page);
       });
