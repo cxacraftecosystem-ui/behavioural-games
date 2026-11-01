@@ -30,6 +30,15 @@ if ! command -v aws >/dev/null; then
   rm -rf /tmp/aws /tmp/awscliv2.zip
 fi
 
+# 2 GiB swapfile: the t3.small has 1.9 GiB of RAM and the compose memory caps assume swap behind them.
+if ! swapon --show=NAME --noheadings | grep -qx /swapfile; then
+  [ -f /swapfile ] || { fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile; }
+  swapon /swapfile
+fi
+grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >>/etc/fstab
+echo 'vm.swappiness=10' >/etc/sysctl.d/99-shriii-swap.conf
+sysctl -q -p /etc/sysctl.d/99-shriii-swap.conf
+
 # Unattended security updates (on by default on Ubuntu; make sure).
 apt-get install -y unattended-upgrades
 systemctl enable --now unattended-upgrades

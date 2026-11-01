@@ -9,7 +9,7 @@
 #   security group shriii-backend (80/443 from anywhere over IPv4 and IPv6, 22 from OPERATOR_CIDR only)
 #   key pair shriii-backend (private key saved to ~/.ssh/shriii-backend.pem; never commit it)
 #   Elastic IP shriii-backend, and the hostname <eip-with-dashes>.sslip.io
-#   instance shriii-backend: Ubuntu 24.04 LTS (latest, SSM public parameter), t3.medium, 30 GB gp3 encrypted,
+#   instance shriii-backend: Ubuntu 24.04 LTS (latest, SSM public parameter), t3.small, 30 GB gp3 encrypted,
 #     IMDSv2 required (hop limit 1), termination protection, user data = user-data.sh
 # Prints the instance id, Elastic IP and hostname.
 set -euo pipefail
@@ -21,7 +21,7 @@ GIT_REF="${1:-main}"
 NAME=shriii-backend
 PROJECT=shriii-kiosk-games
 OPERATOR_CIDR="${OPERATOR_CIDR:?set OPERATOR_CIDR, e.g. 49.47.131.192/32}"
-INSTANCE_TYPE="${INSTANCE_TYPE:-t3.medium}"
+INSTANCE_TYPE="${INSTANCE_TYPE:-t3.small}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 TAGS_IAM=("Key=Project,Value=$PROJECT" "Key=Name,Value=$NAME")

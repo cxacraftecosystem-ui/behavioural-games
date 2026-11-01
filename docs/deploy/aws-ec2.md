@@ -19,7 +19,7 @@ EC2 instance role ──▶ SSM /shriii/prod/* (SecureString, aws/ssm KMS key) �
 | Item | Value |
 |---|---|
 | API base URL | `https://52-66-109-32.sslip.io` (`/healthz`, `/readyz`, `/api/v1/...`, `/docs`) |
-| Instance | `i-0fb9646b9ad18744b`, `shriii-backend`, t3.medium, Ubuntu 24.04 LTS, 30 GB gp3 (encrypted), IMDSv2 only |
+| Instance | `i-0fb9646b9ad18744b`, `shriii-backend`, t3.small (2 vCPU, 2 GiB, CPU credits `unlimited`), Ubuntu 24.04 LTS, 30 GB gp3 (encrypted), 2 GiB swapfile, IMDSv2 only |
 | Elastic IP | `52.66.109.32` (hostname `52-66-109-32.sslip.io` via sslip.io wildcard DNS) |
 | Security group | `shriii-backend`: 80/443 TCP and 443 UDP from `0.0.0.0/0` and `::/0`; 22 from the operator IP only |
 | IAM | role and instance profile `shriii-backend-ec2`: `ssm:GetParameter(s)`/`GetParametersByPath` on `/shriii/prod/*`, `kms:Decrypt` on the `aws/ssm` key via SSM only, `AmazonSSMManagedInstanceCore`, ECR pull on the two backend repositories |
@@ -315,17 +315,24 @@ pull from GHCR instead once the packages are public, add `IMAGE_REGISTRY=ghcr.io
 
 | Item | Monthly |
 |---|---|
-| t3.medium (2 vCPU, 4 GiB) | about $33 |
+| t3.small (2 vCPU, 2 GiB; $0.0224/hour) | about $16.4 |
 | 30 GB gp3 | about $2.7 |
 | Elastic IP / public IPv4 | about $3.6 |
 | Data out | first 100 GB/month free, then about $0.11/GB |
 | SSM standard parameters, Run Command, Session Manager | free |
 | ECR storage (two repositories, newest 30 images each, about 0.4 GB per image) | about $1-3 |
 | GHCR, sslip.io, Let's Encrypt | free |
-| **AWS total** | **about $40/month** before data transfer; Supabase is billed separately |
+| **AWS total** | **about $24/month** before data transfer; Supabase is billed separately |
 
-A 1-year Savings Plan cuts the instance cost by about 35 %. A t3.small (2 GiB) is enough for the API alone but
-leaves no room for the demo pipeline or larger validation jobs.
+A 1-year Savings Plan cuts the instance cost by about 35 %. The instance was a t3.medium (4 GiB, about $33)
+until 2026-11-02, when it moved to a t3.small: measured use was about 0.7 GiB at peak (api ~305 MiB, worker
+~245 MiB, caddy ~29 MiB, host ~0.35 GiB). The compose file caps api at 700m, worker at 600m and caddy at 128m,
+with the 2 GiB swapfile behind them. The default-size `synthetic.sh demo` stops the worker while it runs, which
+frees the worker's share for the uncapped one-shot container; it last ran on the t3.medium, so watch `free -m`
+during its first run on the t3.small. For a larger demo or a heavy validation run, resize to t3.medium first (stop, `modify-instance-attribute
+--instance-type`, start: the Elastic IP and certificate survive) and raise the caps for the run. Both sizes earn
+the same CPU credits (20 % baseline per vCPU); with `unlimited` credits a sustained load above that baseline is
+billed at $0.05 per vCPU-hour instead of being throttled.
 
 ## Teardown
 
