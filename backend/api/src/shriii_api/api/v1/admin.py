@@ -779,7 +779,7 @@ def put_user_grants(
     user = db.get(StaffUser, sub.strip().lower())
     if user is None:
         raise_error(404, "unknown_user", "staff account not found")
-    roles = sorted(set(body.roles))
+    roles: list[str] = sorted({str(r) for r in body.roles})
     studies = sorted({s.strip() for s in body.studies if s.strip()}) or ["*"]
     if user.username == principal.sub.strip().lower() and ("admin" not in roles or body.disabled is True):
         raise_error(409, "self_lockout", "you cannot remove your own admin role or disable yourself")

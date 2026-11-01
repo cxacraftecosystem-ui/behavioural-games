@@ -67,6 +67,7 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
     if (!config.bridge) return;
     (globalThis as { __shriiiKiosk?: KioskRuntime | null }).__shriiiKiosk = runtime;
   }, [config.bridge, runtime]);
+  const deviceToken = config.deviceToken ?? electronToken ?? null;
   const options = useMemo(
     () => ({
       apiBase: config.apiBase,
@@ -78,9 +79,7 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
       artFactory: config.testTimingProfile ? LOW_SPEC_ART_FACTORY : ART_FACTORY,
       audioFactory: AUDIO_FACTORY,
       ...(config.kioskId ? { device: { kioskId: config.kioskId } } : {}),
-      ...((config.deviceToken ?? electronToken)
-        ? { deviceToken: config.deviceToken ?? electronToken }
-        : {}),
+      ...(deviceToken ? { deviceToken } : {}),
       // Test bridge builds run on software GL in CI: keep animations on wall-clock time.
       ...(config.bridge ? { wallClockAnimations: true } : {}),
       ...(config.pxPerMm ? { pxPerMm: config.pxPerMm } : {}),
@@ -88,7 +87,7 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
       ...(config.testTimingProfile ? { testTimingProfile: true } : {}),
       ...(validate ? { validate } : {}),
     }),
-    [config, validate, electronToken],
+    [config, validate, deviceToken],
   );
   if (validate === undefined || electronToken === undefined) return null;
   return (
