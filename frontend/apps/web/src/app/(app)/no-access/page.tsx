@@ -15,11 +15,11 @@ export default function NoAccessPage() {
       <EmptyState
         icon={LockIcon}
         className="max-w-lg"
-        title="Your account has no console access"
+        title="No console access"
         description={
           principal
-            ? `Signed in as ${principal.sub}. None of your roles opens a research or admin page. Ask a system administrator to grant a role.`
-            : 'Sign in with an account that has a research or admin role.'
+            ? `Signed in as ${principal.sub}. Ask an administrator for a role.`
+            : 'Sign in with a research or admin account.'
         }
         action={
           <Button

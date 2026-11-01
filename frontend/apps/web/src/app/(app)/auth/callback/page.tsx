@@ -4,6 +4,7 @@ import { AlertTriangleIcon, Loader2Icon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api/errors';
@@ -30,12 +31,14 @@ export default function OidcCallbackPage() {
         <div className="w-full max-w-md space-y-4">
           <Alert variant="destructive">
             <AlertTriangleIcon />
-            <AlertTitle>Sign-in could not be completed</AlertTitle>
+            <AlertTitle>Sign-in didn’t complete</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button asChild variant="outline">
-            <Link href="/login">Back to sign in</Link>
-          </Button>
+          <ActionGroup>
+            <Button asChild variant="outline">
+              <Link href="/login">Back to sign in</Link>
+            </Button>
+          </ActionGroup>
         </div>
       ) : (
         <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">

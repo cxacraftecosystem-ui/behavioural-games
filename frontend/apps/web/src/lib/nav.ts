@@ -1,7 +1,8 @@
 /**
  * Route registry for the research and admin consoles (spec section 1, "Required routes").
- * One table drives the sidebar, breadcrumbs, the route guard and the role-navigation tests, so a
- * page is never reachable from the UI without the permission the API will demand for it.
+ * One table drives the island nav, its sheet, the bottom island, breadcrumbs, page-header icons, the
+ * route guard and the role-navigation tests, so a page is never reachable from the UI without the
+ * permission the API will demand for it. Add a destination by appending ONE object here.
  */
 import type { Requirement } from '@/lib/auth/principal';
 import { type Principal, satisfies } from '@/lib/auth/principal';
@@ -31,6 +32,8 @@ export interface NavItem {
   readonly icon: NavIconId;
   readonly section: NavSectionId;
   readonly requires: Requirement;
+  /** A standalone link on the island bar instead of an entry in its section's dropdown. */
+  readonly pinned?: boolean;
 }
 
 export interface NavSection {
@@ -43,10 +46,11 @@ export const RESEARCH_NAV: readonly NavItem[] = [
   {
     href: '/research',
     label: 'Overview',
-    description: 'Research overview and dashboards',
+    description: 'Recruitment, sessions and data quality',
     icon: 'overview',
     section: 'research',
     requires: { any: ['studies.read', 'validation.read'] },
+    pinned: true,
   },
   {
     href: '/research/studies',
@@ -256,4 +260,17 @@ export function breadcrumbs(pathname: string): Crumb[] {
     }
   }
   return crumbs;
+}
+
+/** Destinations the bottom island shows below `lg` before the fifth slot becomes "More". */
+export const ISLAND_MAX_SLOTS = 4;
+
+/**
+ * The bottom island's slots: the first {@link ISLAND_MAX_SLOTS} destinations the principal may open, in
+ * registry order. Everything (these included) is also in the sheet, which "More" opens.
+ */
+export function islandSlots(principal: Principal | null): NavItem[] {
+  return visibleNav(principal)
+    .flatMap((section) => section.items)
+    .slice(0, ISLAND_MAX_SLOTS);
 }

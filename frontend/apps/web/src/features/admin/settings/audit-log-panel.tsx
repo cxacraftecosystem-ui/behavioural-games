@@ -94,10 +94,7 @@ export function AuditLogPanel() {
   const page = audit.data;
 
   return (
-    <Section
-      title="Audit log"
-      description="Every API call, sign-in and data access is recorded with who, what, when and the outcome. Newest first."
-    >
+    <Section title="Audit log" description="Who did what, when, and the outcome. Newest first.">
       <form
         className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3"
         aria-label="Audit filters"
@@ -274,6 +271,7 @@ export function AuditLogPanel() {
               {formatInteger(page.offset + 1)}–{formatInteger(page.offset + page.items.length)} of{' '}
               {formatInteger(page.total)}
             </span>
+            {/* A pager, not an action row. */}
             <div className="flex gap-1">
               <Button
                 size="sm"

@@ -91,7 +91,7 @@ export function ConvergentTab({
     <div className="space-y-6">
       <Section
         title={`Criterion correlations · ${constructName}`}
-        description={`Pre-registered hypotheses (hypotheses.yaml), observed Pearson r with 95% CI, pooled and by language. Convergent hypotheses pass when the lower bound exceeds r0 = ${formatCoefficient(r0)} with the expected sign (Holm within the primary family).`}
+        description={`Pearson r with 95% CI, pooled and by language. Passes when the lower bound exceeds r0 = ${formatCoefficient(r0)} with the expected sign (Holm).`}
       >
         {withEstimates.length > 0 ? (
           <ForestPlot
@@ -228,7 +228,7 @@ export function ConvergentTab({
       {matrix && (
         <Section
           title="Multitrait–multimethod"
-          description="Campbell–Fiske: the validity diagonal (game × self-report for the same construct) should exceed the heterotrait values in its row and column."
+          description="The validity diagonal should exceed the heterotrait values in its row and column."
         >
           <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <MtmmHeatmap
@@ -385,13 +385,13 @@ function ScatterSection({
   return (
     <Section
       title="Scatter with regression"
-      description="Participants from the snapshot's baseline occasion (holdout cohort excluded), OLS line with 95% confidence band. The composite is a display-only unit-weighted z mean of the indicators the engine used."
+      description="Baseline occasion, holdout excluded. OLS line with 95% band; the composite is a display-only z mean."
     >
       {frameQ.isPending ? (
-        <LoadingState rows={3} label="Loading the de-identified snapshot (download is audited)" />
+        <LoadingState rows={3} label="Loading snapshot" />
       ) : frameQ.isError || !frame ? (
         <p className="text-sm text-muted-foreground">
-          The snapshot file could not be loaded for row-level figures (
+          Couldn’t load the snapshot (
           {String((frameQ.error as Error | null)?.message ?? 'unavailable')}).
         </p>
       ) : (
@@ -535,7 +535,7 @@ function OwnVsDiscriminant({
                 {r.label}
               </span>
               <span className="text-right text-xs tabular-nums">{formatCoefficient(r.r)}</span>
-              <span className="col-span-2 h-2 overflow-hidden rounded-full bg-muted">
+              <span className="col-span-2 h-2 overflow-hidden rounded-full bg-surface-200">
                 <span
                   className={
                     r.kind === 'validity'

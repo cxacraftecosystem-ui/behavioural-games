@@ -6,7 +6,7 @@ export function Card({ className, ...props }: ComponentProps<'div'>) {
     <div
       data-slot="card"
       className={cn(
-        'flex flex-col gap-4 rounded-lg border bg-card py-5 text-card-foreground shadow-xs',
+        'flex flex-col gap-4 rounded-lg border border-border bg-card py-5 text-card-foreground shadow-sm',
         className,
       )}
       {...props}
@@ -31,7 +31,7 @@ export function CardTitle({ className, ...props }: ComponentProps<'h3'>) {
   return (
     <h3
       data-slot="card-title"
-      className={cn('text-base font-semibold leading-tight', className)}
+      className={cn('font-display text-base font-semibold leading-tight tracking-tight', className)}
       {...props}
     />
   );

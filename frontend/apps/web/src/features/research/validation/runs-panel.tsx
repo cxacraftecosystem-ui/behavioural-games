@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Can } from '@/components/auth/can';
 import { Section } from '@/components/data/page-header';
 import { StatusBadge } from '@/components/data/status-badge';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -80,9 +81,10 @@ export function RunsPanel({
   return (
     <Section
       title="Validation runs"
-      description={intro ?? 'Every run records its engine, inputs hash, snapshot and git sha.'}
+      description={intro ?? 'Each run records its engine, inputs and snapshot.'}
     >
       <Can all={['validation.run']}>
+        {/* a form row: its two buttons are the action group */}
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
           <div className="space-y-1">
             <Label htmlFor="analysis-select" className="text-xs">
@@ -110,17 +112,19 @@ export function RunsPanel({
             />
             Confirmatory (primary hypotheses, frozen snapshot)
           </label>
-          <Button size="sm" onClick={() => queue.mutate([analysis])} disabled={queue.isPending}>
-            <PlayIcon aria-hidden="true" /> Queue
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => queue.mutate(ANALYSES)}
-            disabled={queue.isPending}
-          >
-            Queue the full plan
-          </Button>
+          <ActionGroup align="start">
+            <Button size="sm" onClick={() => queue.mutate([analysis])} disabled={queue.isPending}>
+              <PlayIcon aria-hidden="true" /> Queue
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => queue.mutate(ANALYSES)}
+              disabled={queue.isPending}
+            >
+              Queue the full plan
+            </Button>
+          </ActionGroup>
         </div>
       </Can>
       <ResultTable

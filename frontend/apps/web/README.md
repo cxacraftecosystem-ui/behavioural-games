@@ -2,6 +2,8 @@
 
 `/kiosk` (mounts `@shriii/kiosk-game` client-side), `/research/*` and `/admin/*` (spec §1 routes), with role-based, study-scoped access.
 
+**Design rules:** `.claude/skills/field-repo-frontend/SKILL.md` at the repo root is the contract for every UI change (tokens, theming, navigation, button rows, copy, accessibility, kiosk rules). Read it first.
+
 Stack: Next.js 16 (App Router, Turbopack), React 19, TypeScript 7 (strict), Tailwind CSS v4, shadcn/ui components on `radix-ui`, TanStack Query and TanStack Table v9, ECharts 6 (tree-shaken thin wrapper), and openapi-fetch with types generated from `backend/api/openapi.json`.
 
 ## Run
@@ -24,12 +26,13 @@ Copy `.env.example` to `.env.local` to configure the app. The backend for dev si
 | `src/app/(app)/(console)/` | Console routes inside `AppShell` + `ConsoleGuard` + `StudyScopeProvider` |
 | `src/app/(app)/login`, `auth/callback`, `no-access` | Sign-in (dev JWT or OIDC PKCE), OIDC redirect, no-role page |
 | `src/app/kiosk/` | Full-screen kiosk (`dynamic(..., { ssr: false })`, no console providers) |
-| `src/lib/nav.ts` | Route registry: one table drives the sidebar, breadcrumbs, guard and tests |
+| `src/lib/nav.ts` | Route registry: one table drives the island nav, its menu sheet, the bottom island, breadcrumbs, page-header icons, the guard and tests |
 | `src/lib/auth/` | Permissions (mirrors `rbac.py`, parity-tested), principal checks, token store, OIDC, `AuthProvider` |
 | `src/lib/api/` | `createApiClient`, `unwrap`, `ApiError`, schema aliases (`Schema<'StudyOut'>`) |
 | `src/lib/export/` | CSV (RFC 4180, BOM, formula-injection safe) and Parquet (hyparquet-writer) with a justification gate and audit sink |
 | `src/lib/stats/` | Display helpers for charts: t/normal quantiles, OLS + CI band, KDE, histogram, Bland–Altman |
-| `src/components/ui/` | shadcn/ui primitives |
+| `src/components/ui/` | shadcn/ui primitives restyled to the skill's tokens, plus `ActionGroup` (every button row) and `ProgressBar` |
+| `src/components/shell/` | `AppShell`, `IslandNav` (desktop pill, phone top bar, bottom island), `NavSheet`, banners, study switcher, theme, account |
 | `src/components/data/` | `DataTable`, `ExportMenu`, `AuditStamp`/`TimeStamp`/`CopyId`, `StatusBadge`, `PageHeader`/`Section`, `EmptyState`/`ErrorState`/`LoadingState`/`QueryState` |
 | `src/components/charts/` | `HeatmapChart`, `ScatterRegressionChart`, `ForestPlot`, `BarCiChart`, `DistributionChart`, `LoadingPlot`, `BlandAltmanPlot` (pure option builders in `options/`) |
 | `src/components/auth/` | `Can`, `RequirePermission`, `usePermission`, `useStudyAccess`, `ConsoleGuard` |
@@ -37,6 +40,8 @@ Copy `.env.example` to `.env.local` to configure the app. The backend for dev si
 `/design-system` shows every building block with synthetic data. It is on in dev builds, and in production only when `NEXT_PUBLIC_ENABLE_UI_GALLERY=true`.
 
 ## Conventions for feature pages
+
+- **UI:** follow the skill. Purple-700 is the only action colour; neutrals come from the themed tokens; every button row goes through `ActionGroup`; copy is one short sentence or nothing.
 
 - **Data:** use `useApi()` with TanStack Query: `useQuery({ queryKey, queryFn: () => unwrap(api.GET('/api/v1/...', { params })) })`. Render loading, error and empty states with `QueryState` or `DataTable`.
 - **Access:** guard actions with `<Can all={[...]} study={studyId}>`. The route guard comes from `nav.ts`, and the API enforces the same rules on its side. Field administrators never see score-bearing pages (PRV-08).

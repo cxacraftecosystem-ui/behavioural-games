@@ -106,7 +106,7 @@ export function ChartFrame({
               type="button"
               aria-pressed={view === 'chart'}
               onClick={() => setView('chart')}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs aria-pressed:bg-muted aria-pressed:font-medium"
+              className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-accent aria-pressed:font-medium aria-pressed:text-accent-foreground"
             >
               <ChartColumnIcon className="size-3.5" aria-hidden="true" />
               Chart
@@ -115,7 +115,7 @@ export function ChartFrame({
               type="button"
               aria-pressed={view === 'table'}
               onClick={() => setView('table')}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs aria-pressed:bg-muted aria-pressed:font-medium"
+              className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground aria-pressed:bg-accent aria-pressed:font-medium aria-pressed:text-accent-foreground"
             >
               <TableIcon className="size-3.5" aria-hidden="true" />
               Table

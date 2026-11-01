@@ -16,7 +16,7 @@ export interface EmptyStateProps {
   readonly className?: string | undefined;
 }
 
-/** Nothing to show yet: says what will appear and how it gets there. */
+/** Nothing here yet: a short title, at most one line of next step, and the control that takes it. */
 export function EmptyState({
   title,
   description,
@@ -29,11 +29,11 @@ export function EmptyState({
     <div
       data-slot="empty-state"
       className={cn(
-        'flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed bg-card/50 px-6 py-10 text-center',
+        'flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card px-6 py-10 text-center',
         className,
       )}
     >
-      <div className="rounded-full bg-muted p-3 text-muted-foreground">
+      <div className="rounded-full bg-accent p-3 text-accent-foreground">
         <Icon className="size-5" aria-hidden="true" />
       </div>
       <div className="max-w-prose space-y-1">
@@ -73,7 +73,7 @@ export function ErrorState({ error, title, onRetry, className }: ErrorStateProps
       </div>
       <div className="max-w-prose space-y-1">
         <p className="text-sm font-medium">
-          {title ?? (forbidden ? 'Access denied' : 'Could not load this data')}
+          {title ?? (forbidden ? 'No access' : 'Couldn’t load this')}
         </p>
         <p className="text-sm text-muted-foreground">{errorMessage(error)}</p>
         {requestId && (

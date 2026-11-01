@@ -12,7 +12,6 @@ import { useId, useState } from 'react';
 import { StatusBadge } from '@/components/data/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatBytes } from '@/lib/format';
-import { NeedsApi } from '../shared/components';
 import {
   type CheckStatus,
   type DecodedAudio,
@@ -64,7 +63,8 @@ const OVERALL: Record<
 
 /**
  * Audio slot for one line × language: pick a take, measure it in the browser against qc.yaml and see
- * pass/warn/fail per check. Uploading into the manifest needs an API endpoint that does not exist yet.
+ * pass/warn/fail per check. Takes that pass go into the manifest through tools/audio-pipeline (the
+ * upload endpoint is listed in shared/missing-endpoints.ts).
  */
 export function AudioSlot({
   lineId,
@@ -138,14 +138,13 @@ export function AudioSlot({
       </div>
       {voiceForbidden && (
         <p className="text-xs text-muted-foreground">
-          This line is on the never-voice list: it is never routed to the speakers (headset only
-          where allowed).
+          Never played on the speakers (headset only).
         </p>
       )}
       <p className="text-xs text-muted-foreground">
         Target {(targetDurationMs / 1000).toFixed(2)} s · loudness {qc.targetLufs} ±{' '}
-        {qc.toleranceLu} LU · true peak ≤ {qc.truePeakCeilingDbtp} dBTP
-        (tools/audio-pipeline/config/qc.yaml). Measured locally; nothing leaves this browser.
+        {qc.toleranceLu} LU · true peak ≤ {qc.truePeakCeilingDbtp} dBTP. Checked in this browser
+        only.
       </p>
       {busy && (
         <p className="text-sm text-muted-foreground" role="status">
@@ -185,13 +184,8 @@ export function AudioSlot({
               );
             })}
           </ul>
-          <Button size="sm" disabled title="The upload endpoint does not exist yet">
-            <UploadIcon aria-hidden="true" />
-            Upload to manifest slot
-          </Button>
         </div>
       )}
-      <NeedsApi endpoint="audioUpload" compact />
     </div>
   );
 }

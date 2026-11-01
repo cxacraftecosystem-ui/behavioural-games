@@ -92,8 +92,7 @@ export function RegisterKioskDialog({
         <DialogHeader>
           <DialogTitle>Register a kiosk</DialogTitle>
           <DialogDescription>
-            Creates the device record and issues its device token. The token is shown once; store it
-            in the kiosk's secure storage during provisioning.
+            Its device token is shown once. Store it on the kiosk while provisioning.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -218,25 +217,18 @@ export function TokenOnceDialog({
             <KeyRoundIcon className="size-4" aria-hidden="true" />
             Device token for {token?.kiosk.kiosk_id}
           </DialogTitle>
-          <DialogDescription>
-            This is the only time the token is shown. The server keeps only its digest. If it is
-            lost, rotate the token.
-          </DialogDescription>
+          <DialogDescription>Shown only once. If it’s lost, rotate the token.</DialogDescription>
         </DialogHeader>
         {token && (
           <div className="space-y-3">
             <CopyField label="Device token" value={token.device_token} />
-            <CopyField
-              label="Backend X25519 public key (seal per-session keys to this)"
-              value={token.backend_x25519_public_key}
-            />
+            <CopyField label="Backend public key" value={token.backend_x25519_public_key} />
             <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-xs">
               <TriangleAlertIcon
                 className="mt-0.5 size-3.5 shrink-0 text-warning"
                 aria-hidden="true"
               />
-              Do not paste the token into chat, email or tickets. Enter it on the kiosk during
-              provisioning only.
+              Enter it on the kiosk only — never in chat, email or tickets.
             </p>
             <div className="flex items-center gap-2">
               <Checkbox
@@ -389,10 +381,7 @@ export function DeployDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Deploy {kiosk?.kiosk_id}</DialogTitle>
-          <DialogDescription>
-            A new deployment supersedes the kiosk's active one. Open public sites run in thank-you
-            mode with no criterion capture until the unattended-mode substudy passes.
-          </DialogDescription>
+          <DialogDescription>Replaces the kiosk’s active deployment.</DialogDescription>
         </DialogHeader>
         <form
           className="grid gap-3 sm:grid-cols-2"
@@ -505,11 +494,7 @@ export function DeployDialog({
               onChange={(e) => setForm({ ...form, app_version: e.target.value })}
             />
           </Field>
-          <Field
-            id={`${base}-ring`}
-            label="Update ring"
-            hint="lab → single kiosk → 10 % → all (KSK-11)"
-          >
+          <Field id={`${base}-ring`} label="Update ring" hint="lab → single kiosk → 10 % → all">
             <Input
               id={`${base}-ring`}
               value={form.ring}

@@ -89,7 +89,7 @@ export function ContentVersions() {
   return (
     <Section
       title="Content versions"
-      description="Hash stamps of games, instruments, dictionary, gates and hypotheses. Sessions record the stamp they ran under (PLT-03)."
+      description="Each session records the version it ran under."
       actions={
         <Can all={['admin.content']}>
           <Button
@@ -117,7 +117,7 @@ export function ContentVersions() {
         empty={
           <EmptyState
             title="No content versions stamped yet"
-            description="Stamp current content to record hashes for review and approval."
+            description="Stamp current content to start an approval."
           />
         }
       />
@@ -130,7 +130,7 @@ export function ContentVersions() {
           }
         }}
         title="Approve content version"
-        description="Content approval needs two different named people (two-person rule, enforced by the API)."
+        description="Needs two different people."
         subject={target ? `${target.kind} ${target.version} · ${target.sha256.slice(0, 16)}` : ''}
         pending={approve.isPending}
         error={approve.error}

@@ -31,7 +31,7 @@ import { unwrap } from '@/lib/api/client';
 import type { Schema } from '@/lib/api/types';
 import { useApi } from '@/lib/auth/auth-context';
 import { formatInteger } from '@/lib/format';
-import { Hash, NeedsApi, useAdminMutation } from '../shared/components';
+import { Hash, useAdminMutation } from '../shared/components';
 import { adminKeys } from '../shared/query-keys';
 import type { SettingsInputs } from './load-settings.server';
 
@@ -111,8 +111,7 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
         title="Retention schedule"
         description={
           <>
-            Rules the nightly run applies (<code className="font-mono">{retention.path}</code> v
-            {retention.version}, sha256 <Hash value={retention.sha256} />, read at build). Legal
+            Applied nightly · v{retention.version} · sha256 <Hash value={retention.sha256} />. Legal
             holds block purges.
           </>
         }
@@ -201,22 +200,17 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
             {report.dry_run ? 'dry run' : 'live'}) against policy{' '}
             {report.report.policy_version ?? '—'} · sha256 <Hash value={report.policy_sha256} />
             {report.policy_sha256 !== retention.sha256 &&
-              ' · the server runs a different rules file than this build shows'}
+              ' · the server’s rules differ from the ones shown'}
           </p>
         )}
-        <div className="grid gap-2 md:grid-cols-2">
-          <NeedsApi endpoint="retentionPolicy" compact />
-          <NeedsApi endpoint="retentionRuns" compact />
-        </div>
       </Section>
 
-      <Section
-        title="Legal holds"
-        description="A hold on a study, session or participant blocks purges and erasure until released"
-      >
+      <Section title="Legal holds" description="Blocks purges and erasure until released.">
         <Can
           all={['retention.run']}
-          fallback={<p className="text-sm text-muted-foreground">Requires retention.run.</p>}
+          fallback={
+            <p className="text-sm text-muted-foreground">You don’t have access to legal holds.</p>
+          }
         >
           <div className="grid gap-6 lg:grid-cols-2">
             <form
@@ -314,18 +308,16 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
               >
                 Release hold
               </Button>
-              <NeedsApi endpoint="legalHolds" compact />
             </form>
           </div>
         </Can>
       </Section>
 
-      <Section
-        title="Erasure requests"
-        description="Participant and session erasure (PRV-06); receipts are signed"
-      >
+      <Section title="Erasure requests" description="Receipts are signed.">
         {!canErasure ? (
-          <p className="text-sm text-muted-foreground">Requires erasure.execute.</p>
+          <p className="text-sm text-muted-foreground">
+            You don’t have access to erasure requests.
+          </p>
         ) : (
           <QueryState
             query={erasure}

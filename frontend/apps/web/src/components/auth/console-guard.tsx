@@ -36,15 +36,15 @@ export function ConsoleGuard({ children }: { readonly children: ReactNode }) {
     );
   }
   if (status === 'error') {
-    return <ErrorState error={error} title="Could not load your account" onRetry={retry} />;
+    return <ErrorState error={error} title="Couldn’t load your account" onRetry={retry} />;
   }
   if (!canOpen(principal, pathname)) {
     return (
       <div data-testid="forbidden">
         <EmptyState
           icon={LockIcon}
-          title="You do not have access to this page"
-          description="Your role or study scope does not include it. Ask a system administrator if you need access."
+          title="No access to this page"
+          description="Ask an administrator if you need it."
           action={
             <Button asChild variant="outline" size="sm">
               <Link href={defaultLanding(principal)}>Go to your start page</Link>

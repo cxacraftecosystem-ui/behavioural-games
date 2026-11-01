@@ -1,18 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  BanIcon,
-  DownloadCloudIcon,
-  KeyRoundIcon,
-  LockIcon,
-  MoreHorizontalIcon,
-  PlusIcon,
-  PowerIcon,
-  RefreshCwIcon,
-  RocketIcon,
-  Trash2Icon,
-} from 'lucide-react';
+import { BanIcon, KeyRoundIcon, MoreHorizontalIcon, PlusIcon, RocketIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Can, usePermission } from '@/components/auth/can';
 import { TimeStamp } from '@/components/data/audit-stamp';
@@ -42,7 +31,7 @@ import { useApi } from '@/lib/auth/auth-context';
 import { formatInteger, formatNumber } from '@/lib/format';
 import { useStudyScope } from '@/lib/study-scope';
 import { effectivePolicy, POLICY_SETTING_KEY, parsePolicyDocument } from '../settings/policy';
-import { KeyValues, NeedsApi, StatTile, useAdminMutation } from '../shared/components';
+import { KeyValues, StatTile, useAdminMutation } from '../shared/components';
 import { adminKeys } from '../shared/query-keys';
 import {
   activeDeployments,
@@ -81,14 +70,6 @@ type FleetRow = Kiosk & {
 const kcol = dataColumnHelper<FleetRow>();
 const dcol = dataColumnHelper<Deployment>();
 const ecol = dataColumnHelper<SystemEvent>();
-
-const REMOTE_COMMANDS = [
-  { id: 'lock', label: 'Lock', icon: LockIcon },
-  { id: 'restart', label: 'Restart', icon: PowerIcon },
-  { id: 'sync', label: 'Sync now', icon: RefreshCwIcon },
-  { id: 'pull_logs', label: 'Pull scrubbed logs', icon: DownloadCloudIcon },
-  { id: 'wipe', label: 'Wipe', icon: Trash2Icon },
-] as const;
 
 /** `/admin/kiosks`: fleet registration, device tokens, health, deployments and site modes. */
 export function AdminKiosksPage() {
@@ -186,7 +167,7 @@ export function AdminKiosksPage() {
         }),
       ),
     invalidate: [adminKeys.kiosks(), adminKeys.systemEvents()],
-    success: (k: Kiosk) => `${k.kiosk_id} revoked: its token no longer authenticates`,
+    success: (k: Kiosk) => `${k.kiosk_id} revoked`,
   });
   const deploy = useAdminMutation({
     mutationFn: (body: Schema<'DeploymentIn'>) =>
@@ -392,7 +373,7 @@ export function AdminKiosksPage() {
     <div className="space-y-8">
       <PageHeader
         title="Kiosks"
-        description="Kiosk fleet: registration and device tokens, heartbeat health, outbox backlog, deployments and site mode. Heartbeats carry no participant identifiers."
+        description="Registration, health and deployments."
         actions={
           <Can all={['admin.kiosks']}>
             <Button onClick={() => setRegisterOpen(true)}>
@@ -412,7 +393,7 @@ export function AdminKiosksPage() {
         <StatTile
           label="Healthy"
           value={kiosks.isPending ? '…' : summary.healthy}
-          hint="Heartbeat within the server's window"
+          hint="Heartbeat on time"
         />
         <StatTile
           label="Stale"
@@ -432,15 +413,12 @@ export function AdminKiosksPage() {
           hint={
             kiosks.isPending
               ? 'Unsynced events'
-              : `Unsynced events, last heartbeat of ${summary.backlogReporting} of ${summary.active} active kiosks`
+              : `Unsynced, last heartbeat of ${summary.backlogReporting} of ${summary.active} active kiosks`
           }
         />
       </div>
 
-      <Section
-        title="Fleet"
-        description="Select a kiosk for its heartbeat, deployments and remote commands"
-      >
+      <Section title="Fleet" description="Select a kiosk to open it.">
         <DataTable
           data={fleetRows}
           columns={kioskColumns}
@@ -455,16 +433,13 @@ export function AdminKiosksPage() {
           empty={
             <EmptyState
               title="No kiosks registered"
-              description="Register a kiosk to issue its device token, then deploy it to a site."
+              description="Register a kiosk, then deploy it to a site."
             />
           }
         />
       </Section>
 
-      <Section
-        title="Deployments"
-        description="Site assignments; a new deployment supersedes the kiosk's active one"
-      >
+      <Section title="Deployments" description="A new deployment replaces the kiosk’s active one.">
         <DataTable
           data={deployments.data}
           columns={deploymentColumns}
@@ -480,19 +455,15 @@ export function AdminKiosksPage() {
         />
       </Section>
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <Section
-          title="Upload problems"
-          description="Open dead letters by reason and app version (ingestion rejects)"
-        >
+        <Section title="Upload problems" description="Rejected uploads by reason and app version">
           {!canDlq ? (
-            <p className="text-sm text-muted-foreground">Requires dead_letter.manage.</p>
+            <p className="text-sm text-muted-foreground">
+              You don’t have access to upload problems.
+            </p>
           ) : dlq.isPending ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : (dlq.data ?? []).length === 0 ? (
-            <EmptyState
-              title="No open dead letters"
-              description="Every uploaded event validated and was accepted."
-            />
+            <EmptyState title="No upload problems" />
           ) : (
             <ul className="divide-y rounded-lg border bg-card text-sm">
               {(dlq.data ?? []).map((r) => (
@@ -512,10 +483,7 @@ export function AdminKiosksPage() {
             </ul>
           )}
         </Section>
-        <Section
-          title="System events"
-          description="Operational events (stale heartbeats, revocations, ingestion)"
-        >
+        <Section title="System events" description="Stale heartbeats, revocations and ingestion">
           <DataTable
             data={events.data}
             columns={eventColumns}
@@ -583,26 +551,6 @@ export function AdminKiosksPage() {
                     ...dv.extras.map(([k, v]) => [k, v] as const),
                   ]}
                 />
-                <Section
-                  title="Remote commands"
-                  description="Applied within 2 minutes when online, or at next boot (KSK-10)"
-                >
-                  <div className="flex flex-wrap gap-2">
-                    {REMOTE_COMMANDS.map((cmd) => (
-                      <Button
-                        key={cmd.id}
-                        variant="outline"
-                        size="sm"
-                        disabled
-                        title="Remote command endpoint not available yet"
-                      >
-                        <cmd.icon aria-hidden="true" />
-                        {cmd.label}
-                      </Button>
-                    ))}
-                  </div>
-                  <NeedsApi endpoint="kioskCommands" compact />
-                </Section>
                 <Section title="Deployments">
                   <ul className="space-y-1 text-sm">
                     {(deployments.data ?? [])
@@ -666,7 +614,7 @@ export function AdminKiosksPage() {
       <ConfirmKioskDialog
         kiosk={rotateTarget}
         action={rotateTarget?.status === 'revoked' ? 'Reinstate' : 'Rotate token for'}
-        description="Issues a new device token and invalidates the old one immediately. The kiosk stops uploading until the new token is entered on it."
+        description="The old token stops working at once. The kiosk can’t upload until the new token is entered on it."
         confirmLabel="Issue new token"
         pending={rotate.isPending}
         error={rotate.error}
@@ -687,7 +635,7 @@ export function AdminKiosksPage() {
       <ConfirmKioskDialog
         kiosk={revokeTarget}
         action="Revoke"
-        description="Use for a stolen or decommissioned kiosk. Its token stops authenticating at once; queued events on the device are not accepted until it is reinstated."
+        description="For a lost or retired kiosk. Its token stops working at once and its queued events are refused until it is reinstated."
         confirmLabel="Revoke kiosk"
         destructive
         pending={revoke.isPending}

@@ -42,7 +42,7 @@ import { useApi, useAuth } from '@/lib/auth/auth-context';
 import { DEMO_MODE } from '@/lib/demo';
 import { cn } from '@/lib/utils';
 import { canonicalJson, isPlainObject } from '../shared/canonical-json';
-import { Hash, KeyValues, NeedsApi, useAdminMutation } from '../shared/components';
+import { Hash, KeyValues, useAdminMutation } from '../shared/components';
 import { adminKeys } from '../shared/query-keys';
 import {
   approve,
@@ -318,10 +318,7 @@ export function PolicyPanel({
 
   return (
     <div className="space-y-8">
-      <Section
-        title="Stored policy"
-        description="Latest version in the deployment_policy setting. Kiosks may only run an approved, signed version (deployment policy_version)."
-      >
+      <Section title="Stored policy" description="Kiosks run an approved, signed version only.">
         {current ? (
           <div className="space-y-3 rounded-lg border bg-card p-4" data-testid="policy-current">
             <div className="flex flex-wrap items-center gap-2">
@@ -382,11 +379,7 @@ export function PolicyPanel({
                 ],
                 [
                   'Signature',
-                  current.signature ? (
-                    <Hash key="sg" value={current.signature} />
-                  ) : (
-                    'Unsigned: kiosks must not accept it as a signed policy yet'
-                  ),
+                  current.signature ? <Hash key="sg" value={current.signature} /> : 'Unsigned',
                 ],
               ]}
             />
@@ -411,7 +404,7 @@ export function PolicyPanel({
                                 own_proposal: 'You cannot approve your own proposal.',
                                 already_approved: 'You already approved it.',
                                 hash_mismatch:
-                                  'The stored values do not match their hash; do not approve, propose again.',
+                                  'The stored values don’t match their hash. Propose again.',
                               }[res.reason],
                         );
                         return;
@@ -431,20 +424,19 @@ export function PolicyPanel({
                 )}
               </div>
             )}
-            <NeedsApi endpoint="policySign" compact />
           </div>
         ) : (
           <EmptyState
             icon={FileSignatureIcon}
             title="No deployment policy stored yet"
-            description="The editor below starts from the plan's defaults (§1.4). Propose it as version 1.0.0; a second person approves it."
+            description="Propose version 1.0.0 below; a second person approves it."
           />
         )}
       </Section>
 
       <Section
         title={`Propose version ${nextPolicyVersion(current?.policy_version ?? null)}`}
-        description="Two people: you propose, a colleague approves. Locked keys cannot change here. Scientific settings stay in stats/measurement-model YAML."
+        description="You propose, a colleague approves. Locked keys can’t change here."
       >
         {current?.status === 'proposed' && (
           <Alert variant="warning">
@@ -519,7 +511,7 @@ export function PolicyPanel({
             id={`${fieldId}-note`}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Why this change, and which approval record (ethics board, PLT-09) covers it"
+            placeholder="Why this change, and which approval covers it"
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
@@ -541,12 +533,9 @@ export function PolicyPanel({
         </div>
       </Section>
 
-      <Section
-        title="Version history"
-        description="From the audit log (each change records the previous and new value)"
-      >
+      <Section title="Version history" description="Each change keeps the previous and new value.">
         {!canAudit ? (
-          <p className="text-sm text-muted-foreground">Requires audit.read.</p>
+          <p className="text-sm text-muted-foreground">You don’t have access to the audit log.</p>
         ) : history.isPending ? (
           <LoadingState rows={3} />
         ) : versions.length === 0 ? (

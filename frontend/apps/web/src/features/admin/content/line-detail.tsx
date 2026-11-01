@@ -17,7 +17,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { KeyValues, NeedsApi } from '../shared/components';
+import { KeyValues } from '../shared/components';
 import { AudioSlot } from './audio-slot';
 import { statusById, transitionOptions } from './catalogue-model';
 import type { CatalogueLine, ContentSnapshot } from './content-types';
@@ -47,8 +47,7 @@ export function LineDetail({
             <div className="space-y-5 px-4 pb-6">
               <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
                 <p className="text-xs text-muted-foreground">
-                  Reference script ({snapshot.referenceLanguage}): for recording and translation
-                  only, never synthesised
+                  Reference script ({snapshot.referenceLanguage})
                 </p>
                 <p className="text-sm leading-6">{line.referenceText}</p>
                 <p className="text-xs text-muted-foreground">{line.context}</p>
@@ -154,7 +153,7 @@ export function LineDetail({
                           )}
                           {!entry.record && (
                             <p className="text-xs text-muted-foreground">
-                              Not recorded in this language (record: false).
+                              Not recorded in this language.
                             </p>
                           )}
                         </div>
@@ -202,7 +201,9 @@ export function LineDetail({
                               ))}
                             </ul>
                           )}
-                          <NeedsApi endpoint="lineTransition" compact />
+                          <p className="text-xs text-muted-foreground">
+                            Record sign-offs in the translation workbook.
+                          </p>
                         </div>
                       )}
 

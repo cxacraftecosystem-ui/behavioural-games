@@ -24,7 +24,9 @@ playwright-report/
 .env.*.local
 !.env.example
 uv.lock.bak
-.claude/
+# Local Claude state stays out; the shared skills are part of the repo.
+.claude/*
+!.claude/skills/
 .hypothesis/
 # Run artefacts: load-test results are uploaded as CI artifacts (loadtest.yml), never committed.
 tools/loadtest/results/

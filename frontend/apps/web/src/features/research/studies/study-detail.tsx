@@ -16,12 +16,14 @@ import { BarCiChart } from '@/components/charts';
 import { PageHeader, Section } from '@/components/data/page-header';
 import { ErrorState, LoadingState } from '@/components/data/states';
 import { StatusBadge } from '@/components/data/status-badge';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import {
   Select,
   SelectContent,
@@ -117,9 +119,7 @@ export function StudyDetailPage({ studyId }: { readonly studyId: string }) {
         <Alert>
           <LockIcon aria-hidden="true" />
           <AlertTitle>Study frozen {s.frozen_at ? formatDateTime(s.frozen_at) : ''}</AlertTitle>
-          <AlertDescription>
-            The design and its ready snapshots are locked; new records are refused by the API.
-          </AlertDescription>
+          <AlertDescription>The design and its ready snapshots are locked.</AlertDescription>
         </Alert>
       )}
       <Tabs value={tab ?? 'design'} onValueChange={(v) => setTab(v === 'design' ? null : v)}>
@@ -319,7 +319,7 @@ function DesignTab({ design, frozen }: { readonly design: StudyDesign; readonly 
             <Can all={['studies.write']}>
               <FormDialog
                 title="Register a protocol version"
-                description="The document hash is computed here from the file you choose; the document itself is not uploaded."
+                description="Only the file’s hash is recorded; the file stays with you."
                 trigger={
                   <Button size="sm" variant="outline">
                     <PlusIcon aria-hidden="true" /> Version
@@ -725,7 +725,7 @@ function RecruitmentTab({
     <div className="space-y-6">
       <Section
         title="Stratified recruitment targets"
-        description={`${formatInteger(q.enrolled)} of ${formatInteger(q.target)} places filled (${pct(q.share, 0)}) · ${q.fullCells} of ${q.cells} cells full. Enrolment into a full cell is refused or warned by the API.`}
+        description={`${formatInteger(q.enrolled)} of ${formatInteger(q.target)} places filled (${pct(q.share, 0)}) · ${q.fullCells} of ${q.cells} cells full.`}
         actions={
           !frozen && (
             <Can all={['studies.write']}>
@@ -772,19 +772,12 @@ function RecruitmentTab({
                 <span className="text-sm font-medium">{cellLabel(c.cell)}</span>
                 {c.full && <StatusBadge status="closed" tone="good" label="full" />}
               </div>
-              <div
-                className="h-2 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                aria-label={`${cellLabel(c.cell)} quota`}
-                aria-valuemin={0}
-                aria-valuemax={c.target}
-                aria-valuenow={c.enrolled}
-              >
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.min(100, (c.enrolled / c.target) * 100)}%` }}
-                />
-              </div>
+              <ProgressBar
+                className="h-2"
+                label={`${cellLabel(c.cell)} quota`}
+                value={c.enrolled}
+                max={c.target}
+              />
               <p className="text-xs tabular-nums text-muted-foreground">
                 {formatInteger(c.enrolled)} / {formatInteger(c.target)} enrolled
               </p>
@@ -971,7 +964,7 @@ function RetestsTab({
     <div className="space-y-4">
       <Section
         title={`Retest scheduling · ${pair.first.occasion_id} → ${pair.retest.occasion_id}`}
-        description={`Window ${pair.retest.offset_days_min}–${pair.retest.offset_days_max} days after the completed ${pair.first.label.toLowerCase()} session. Reminders need a contact opt-in; the API refuses the others. Retests outside the window are flagged as out-of-window pairs.`}
+        description={`Window ${pair.retest.offset_days_min}–${pair.retest.offset_days_max} days after the completed ${pair.first.label.toLowerCase()} session. Reminders need a contact opt-in.`}
         actions={
           !frozen && (
             <Can all={['studies.write']}>
@@ -1024,8 +1017,7 @@ function RetestsTab({
               {result.scheduled.length} scheduled · {result.refused.length} refused
             </AlertTitle>
             <AlertDescription>
-              Refusals are participants without a contact opt-in; they can still be retested in
-              person.
+              Refused: no contact opt-in. They can still be retested in person.
             </AlertDescription>
           </Alert>
         )}
@@ -1125,7 +1117,7 @@ function DeviationsTab({ studyId }: { readonly studyId: string }) {
   return (
     <Section
       title="Protocol deviations"
-      description="Recorded by field administrators and researchers; reported in the scientific report."
+      description="Listed in the scientific report."
       actions={
         <Can all={['studies.enroll']}>
           <FormDialog
@@ -1290,7 +1282,7 @@ function DatasetsTab({
         }),
       ),
     onSuccess: async () => {
-      toast.success('Snapshot queued: the worker builds the matched participant × occasion file.');
+      toast.success('Snapshot queued.');
       await qc.invalidateQueries({ queryKey: researchKeys.datasets(sid) });
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -1318,19 +1310,19 @@ function DatasetsTab({
         throw new Error(`download failed (${response.status})`);
       downloadBlob(data, `${d.study_id}-${d.snapshot_id}.parquet`);
     },
-    onSuccess: () => toast.success('Snapshot downloaded (the download is audited).'),
+    onSuccess: () => toast.success('Snapshot downloaded.'),
     onError: (e) => toast.error(errorMessage(e)),
   });
   return (
     <Section
       title="Analysis datasets"
-      description="Matched participant × occasion snapshots (de-identified research ids). Confirmatory analyses run on frozen snapshots only."
+      description="De-identified snapshots. Confirmatory analyses use frozen ones only."
       actions={
         !frozen && (
           <Can all={['datasets.write']}>
             <FormDialog
               title="Build a snapshot"
-              description="Exclusions (withdrawn, no core consent, blocking quality flags, synthetic) are applied and reported by reason."
+              description="Exclusions are applied and reported by reason."
               trigger={
                 <Button size="sm" variant="outline">
                   <PlusIcon aria-hidden="true" /> Build snapshot
@@ -1478,7 +1470,7 @@ function DatasetsTab({
               key: 'act',
               header: '',
               cell: (d) => (
-                <div className="flex justify-end gap-1">
+                <ActionGroup inline align="end">
                   {d.status === 'ready' && (
                     <Can all={['datasets.write']}>
                       <Button
@@ -1502,7 +1494,7 @@ function DatasetsTab({
                       <DownloadIcon aria-hidden="true" /> Parquet
                     </Button>
                   )}
-                </div>
+                </ActionGroup>
               ),
             },
           ]}
@@ -1536,7 +1528,7 @@ function PlanTab({ design, frozen }: { readonly design: StudyDesign; readonly fr
           },
         }),
       ),
-    'Analysis plan registered: hypotheses.yaml and gates.yaml hashes frozen.',
+    'Analysis plan registered.',
   );
   const freezeStudy = useStudyMutation(
     sid,
@@ -1553,7 +1545,7 @@ function PlanTab({ design, frozen }: { readonly design: StudyDesign; readonly fr
     <div className="space-y-6">
       <Section
         title="Registered analysis plans"
-        description="Registering freezes the current hypotheses.yaml, gates.yaml and dictionary hashes. Results outside the registry are exploratory."
+        description="Registering freezes the current hypotheses, gates and dictionary. Anything else is exploratory."
         actions={
           !frozen && (
             <Can all={['studies.write']}>
@@ -1653,7 +1645,7 @@ function PlanTab({ design, frozen }: { readonly design: StudyDesign; readonly fr
         <Can all={['studies.write']}>
           <Section
             title="Freeze and lock"
-            description="Freezing locks the study design and every ready snapshot. It cannot be undone from the console."
+            description="Locks the design and every ready snapshot. This can’t be undone here."
           >
             <div className="flex flex-wrap items-end gap-3 rounded-lg border border-destructive/30 bg-card p-4">
               <Field

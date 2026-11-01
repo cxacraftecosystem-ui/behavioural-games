@@ -23,10 +23,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '@/components/data/page-header';
 import { ErrorState, LoadingState } from '@/components/data/states';
 import { StatusBadge } from '@/components/data/status-badge';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import {
   Select,
   SelectContent,
@@ -216,7 +218,7 @@ export function AdministerPage({ instrumentId }: { readonly instrumentId: string
       <div className="space-y-6">
         <PageHeader
           title={`Administer ${inst.short_name}`}
-          description="Supervised, researcher-administered session on a tablet. Set up the session here, then hand over the full-screen view. Item wording comes from the licensed source file on this device; it is never uploaded."
+          description="Set up the session, then hand the tablet over. Item wording stays on this device."
           meta={
             <Link
               href={`/research/instruments/${encodeURIComponent(instrumentId)}`}
@@ -230,7 +232,7 @@ export function AdministerPage({ instrumentId }: { readonly instrumentId: string
           <Alert variant="warning">
             <AlertTitle>Licensing not cleared</AlertTitle>
             <AlertDescription>
-              {(inst.licensing_warnings ?? []).join(' · ')} The API will refuse the submission.
+              {(inst.licensing_warnings ?? []).join(' · ')} Submission will be refused.
             </AlertDescription>
           </Alert>
         )}
@@ -460,24 +462,18 @@ export function AdministerPage({ instrumentId }: { readonly instrumentId: string
         </div>
         {prog && phase !== 'done' && (
           <div className="flex min-w-60 flex-1 items-center gap-3 px-6">
-            <div
-              className="h-3 flex-1 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-label="Items answered"
-              aria-valuemin={0}
-              aria-valuemax={prog.total}
-              aria-valuenow={prog.answered + prog.skipped}
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-[width]"
-                style={{ width: `${prog.share * 100}%` }}
-              />
-            </div>
+            <ProgressBar
+              className="h-3 flex-1"
+              label="Items answered"
+              value={prog.answered + prog.skipped}
+              max={prog.total}
+            />
             <span className="text-sm tabular-nums text-muted-foreground">
               {phase === 'items' ? index + 1 : prog.total} / {prog.total}
             </span>
           </div>
         )}
+        {/* a toolbar for the overlay, not an action row */}
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -549,7 +545,7 @@ export function AdministerPage({ instrumentId }: { readonly instrumentId: string
               <AlertDescription>{errorMessage(submit.error)}</AlertDescription>
             </Alert>
           )}
-          <div className="flex flex-wrap gap-3">
+          <ActionGroup align="center" className="w-full sm:[&>*]:flex-1">
             <Button
               size="lg"
               variant="outline"
@@ -569,7 +565,7 @@ export function AdministerPage({ instrumentId }: { readonly instrumentId: string
             >
               {submit.isPending ? 'Saving…' : 'Save administration'}
             </Button>
-          </div>
+          </ActionGroup>
         </main>
       )}
 
@@ -582,16 +578,16 @@ export function AdministerPage({ instrumentId }: { readonly instrumentId: string
             <span className="font-mono">{result.scoring_run_id.slice(0, 8)}</span> recorded; no
             scores are shown here.
           </p>
-          <div className="flex gap-3">
-            <Button size="lg" className="h-14 px-8 text-base" onClick={resetForNext}>
-              Next participant
-            </Button>
+          <ActionGroup align="center">
             <Button size="lg" variant="outline" className="h-14 px-8 text-base" asChild>
               <Link href="/research/instruments" onClick={() => void exitFullscreen()}>
                 Done
               </Link>
             </Button>
-          </div>
+            <Button size="lg" className="h-14 px-8 text-base" onClick={resetForNext}>
+              Next participant
+            </Button>
+          </ActionGroup>
         </main>
       )}
     </div>
@@ -720,7 +716,7 @@ function ItemScreen({
                   {values.map((dot, k) => (
                     <span
                       key={`dot-${dot}`}
-                      className={cn('rounded-full', k <= i ? 'bg-primary' : 'bg-muted')}
+                      className={cn('rounded-full', k <= i ? 'bg-primary' : 'bg-surface-300')}
                       style={{ width: 10, height: 10 + k * 6 }}
                     />
                   ))}
@@ -757,7 +753,8 @@ function ItemScreen({
           </Button>
         </div>
       )}
-      <nav className="flex items-center justify-between gap-3">
+      {/* step controls of the item wizard, not an action row */}
+      <nav aria-label="Item" className="flex items-center justify-between gap-3">
         <Button
           variant="outline"
           size="lg"

@@ -216,18 +216,22 @@ export function DataTable<T extends RowData>({
 
   return (
     <div data-slot="data-table" className={cn('space-y-2', className)}>
+      {/* Search, filters and view controls: a toolbar, not an action row. */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
           <label htmlFor={searchId} className="sr-only">
             Search table
           </label>
-          <SearchIcon className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+          <SearchIcon
+            className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             id={searchId}
             value={globalFilter}
             onChange={(e) => table.setGlobalFilter(e.target.value)}
             placeholder={searchPlaceholder}
-            className="h-8 pl-8"
+            className="h-9 pl-8"
           />
         </div>
         {toolbar}
@@ -378,6 +382,7 @@ export function DataTable<T extends RowData>({
           {filteredRows.length !== rows.length &&
             ` (filtered from ${rows.length.toLocaleString('en-IN')})`}
         </span>
+        {/* A pager, not an action row. */}
         <div className="flex items-center gap-1">
           <Button
             variant="outline"

@@ -149,7 +149,7 @@ test('kiosks: fleet health, kiosk detail and one-time token', async ({ page }) =
 
   await page.getByRole('cell', { name: /^pune-market-01 Hadapsar/ }).click();
   const sheet = page.getByRole('dialog');
-  await expect(sheet.getByText('Remote commands')).toBeVisible();
+  await expect(sheet.getByText('Last heartbeat')).toBeVisible();
   await shot(page, '08-kiosks-detail', false);
   await page.keyboard.press('Escape');
 

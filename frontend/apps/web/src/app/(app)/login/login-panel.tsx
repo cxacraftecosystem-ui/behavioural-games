@@ -138,21 +138,21 @@ export function LoginPanel() {
   const reason = signOutReason ? REASON_TEXT[signOutReason] : null;
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md shadow-lg">
       <CardHeader>
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-3 flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="flex size-8 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground"
+            className="grad-brand grid size-9 place-items-center rounded-full font-display text-sm font-bold text-white"
           >
             S
           </span>
-          <span className="text-sm font-semibold">SHRIII Behavioural Games</span>
+          <span className="font-display text-sm font-semibold tracking-tight">
+            SHRIII Behavioural Games
+          </span>
         </div>
-        <CardTitle className="text-lg">Sign in to the research console</CardTitle>
-        <CardDescription>
-          Access is role-based and study-scoped. Every data access is audited.
-        </CardDescription>
+        <CardTitle className="display-title text-2xl">Sign in</CardTitle>
+        <CardDescription>Every data access is audited.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {reason && (
@@ -180,11 +180,8 @@ export function LoginPanel() {
           <section aria-label="Demo sign-in" className="space-y-3" data-testid="demo-sign-in">
             <Alert variant="warning">
               <FlaskConicalIcon />
-              <AlertTitle>DEMO — no real accounts</AlertTitle>
-              <AlertDescription>
-                Pick a role to explore the console. This starts a demo session in your browser only:
-                there are no credentials, no backend and no participant data. {DEMO_BANNER_TITLE}.
-              </AlertDescription>
+              <AlertTitle>Demo — pick a role</AlertTitle>
+              <AlertDescription>{DEMO_BANNER_TITLE}. Nothing leaves your browser.</AlertDescription>
             </Alert>
             {DEMO_ROLES.map((role) => (
               <Button
@@ -258,13 +255,17 @@ export function LoginPanel() {
                   </Button>
                 </div>
                 {capsLock && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                  <p className="text-xs text-warning" role="status">
                     Caps Lock is on.
                   </p>
                 )}
               </div>
               <Button type="submit" className="w-full" disabled={busy} data-testid="sign-in-submit">
-                {busy ? <Loader2Icon className="animate-spin" /> : <LogInIcon />}
+                {busy ? (
+                  <Loader2Icon className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <LogInIcon aria-hidden="true" />
+                )}
                 Sign in
               </Button>
             </form>
@@ -286,8 +287,7 @@ export function LoginPanel() {
             <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <LockKeyholeIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
               <span>
-                Staff accounts are issued by a system administrator. Five failed attempts lock an
-                account for 15 minutes. Sessions last 8 hours.
+                Accounts come from your administrator. Five failed attempts lock it for 15 minutes.
               </span>
             </p>
           </section>
@@ -315,9 +315,7 @@ export function LoginPanel() {
             <Alert variant="warning">
               <AlertTriangleIcon />
               <AlertTitle>Development sign-in</AlertTitle>
-              <AlertDescription>
-                Issues a local signed JWT from the API (ENV=dev only). Production uses OIDC.
-              </AlertDescription>
+              <AlertDescription>Local development only.</AlertDescription>
             </Alert>
             <div className="grid gap-2">
               <Label htmlFor={subId}>Subject</Label>

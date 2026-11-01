@@ -114,7 +114,7 @@ export function AdminGamesPage({ initialGame }: { readonly initialGame?: string 
     <div className="space-y-8">
       <PageHeader
         title="Games"
-        description="Game and trial configuration from content/games, with versions and two-person approval. Approved versions are frozen and are the only ones kiosks load."
+        description="Kiosks load approved versions only."
         actions={
           <Can all={['games.write']}>
             <Button
@@ -123,7 +123,7 @@ export function AdminGamesPage({ initialGame }: { readonly initialGame?: string 
               disabled={sync.isPending}
             >
               <RefreshCwIcon className={cn(sync.isPending && 'animate-spin')} aria-hidden="true" />
-              Sync from content/games
+              Sync games
             </Button>
           </Can>
         }
@@ -143,11 +143,11 @@ export function AdminGamesPage({ initialGame }: { readonly initialGame?: string 
         <StatTile
           label="No approved version"
           value={games.isPending ? '…' : unapproved}
-          hint="Kiosks cannot run these yet"
+          hint="Kiosks can’t run these"
         />
       </div>
 
-      <Section title="Catalogue" description="Select a game to view or edit its configuration">
+      <Section title="Catalogue" description="Select a game to open it.">
         <DataTable
           data={games.data}
           columns={columns}
@@ -162,7 +162,7 @@ export function AdminGamesPage({ initialGame }: { readonly initialGame?: string 
           empty={
             <EmptyState
               title="No games registered"
-              description="Sync loads every config in content/games as a draft version."
+              description="Sync to load every game as a draft."
             />
           }
         />
@@ -178,11 +178,7 @@ export function AdminGamesPage({ initialGame }: { readonly initialGame?: string 
         </section>
       ) : (
         rows.length > 0 && (
-          <EmptyState
-            className="py-6"
-            title="No game selected"
-            description="Pick a row above to see its configuration, versions and approval state."
-          />
+          <EmptyState className="py-6" title="No game selected" description="Pick a row above." />
         )
       )}
 

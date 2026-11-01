@@ -1,7 +1,9 @@
 /**
- * API endpoints the admin console needs but `backend/api` does not provide yet. The UI shows a
- * "needs API" notice instead of faking data; `shared.test.ts` fails as soon as one of
- * these appears in `backend/api/openapi.json`, so the notice gets replaced by the real call.
+ * Developer-facing backlog: API endpoints the admin console needs but `backend/api` does not provide
+ * yet. Nothing here is rendered — customer screens never admit a gap; the capability is simply absent
+ * (or the existing alternative workflow is offered) until the endpoint exists. `shared.test.ts` fails as
+ * soon as one of these appears in `backend/api/openapi.json`, so the entry is removed and the screen
+ * wired to the real call.
  */
 
 export interface MissingEndpoint {

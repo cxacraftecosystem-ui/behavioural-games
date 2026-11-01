@@ -79,7 +79,7 @@ export function ParticipantsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Participants"
-        description="Pseudonymous records only: pids, linkage, consent and enrolment. Identity and contact details are held in a separate vault and never shown in the research console."
+        description="Pseudonymous records only. Identity and contact details are never shown here."
         meta={
           <Badge variant="outline">
             {study ? `${study.code} · ${study.name}` : 'All studies in scope'}
@@ -147,7 +147,7 @@ export function ParticipantsPage() {
               cell: (p) => (
                 <button
                   type="button"
-                  className="font-mono text-xs text-primary hover:underline"
+                  className="font-mono text-xs text-accent-foreground hover:underline"
                   onClick={() => setPid(p.pid)}
                 >
                   {p.pid}
@@ -253,10 +253,7 @@ function ParticipantSheet({
                   ],
                 ]}
               />
-              <Section
-                title="Consent status"
-                description="Current decision per consent kind (separate opt-ins for archive and contact)."
-              >
+              <Section title="Consent status" description="Current decision per consent kind.">
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(d.consent).map(([kind, granted]) => (
                     <StatusBadge
@@ -271,7 +268,7 @@ function ParticipantSheet({
               {hasPermission(principal, 'consent.read') && (
                 <Section
                   title="Consent history"
-                  description="Immutable artefacts; a new decision supersedes the previous one of the same kind."
+                  description="A new decision replaces the previous one of its kind."
                 >
                   {consents.isPending ? (
                     <LoadingState rows={2} />
@@ -405,7 +402,7 @@ function WithdrawPanel({ pid }: { readonly pid: string }) {
     <Can all={['participants.withdraw']}>
       <Section
         title="Withdrawal"
-        description="Stopping participation keeps already collected data under the consent; withdrawing with erasure removes it from every table and future snapshot, with a signed receipt."
+        description="Stopping keeps data collected so far. Erasure removes it everywhere, with a signed receipt."
       >
         <div className="space-y-3 rounded-lg border border-destructive/30 bg-card p-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -501,7 +498,7 @@ function ErasureLookup() {
     <Can all={['erasure.request']}>
       <FormDialog
         title="Erasure requests"
-        description="Request erasure of a single game session, or check the status and signed receipt of an existing request."
+        description="Erase one game session, or check an existing request."
         trigger={
           <Button size="sm" variant="outline">
             <EraserIcon aria-hidden="true" /> Erasure

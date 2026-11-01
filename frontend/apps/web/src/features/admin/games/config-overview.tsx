@@ -83,10 +83,7 @@ export function ConfigOverview({ config }: { readonly config: Record<string, unk
             ]}
           />
         </Section>
-        <Section
-          title="Time budget"
-          description="Per module; the session plan caps the whole visit"
-        >
+        <Section title="Time budget" description="Per module">
           <KeyValues
             items={[
               ['Intro', ms(budget.intro_ms)],
@@ -99,10 +96,7 @@ export function ConfigOverview({ config }: { readonly config: Record<string, unk
         </Section>
       </div>
 
-      <Section
-        title="Calibration levels"
-        description="Timing parameters and duration estimates per level (pilot runs at fixed L2)"
-      >
+      <Section title="Calibration levels" description="Pilot runs at L2">
         <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
@@ -153,10 +147,7 @@ export function ConfigOverview({ config }: { readonly config: Record<string, unk
         </div>
       </Section>
 
-      <Section
-        title="Blocks and trials"
-        description="Trial configuration in schedule order; minimums come from the scoring dictionary"
-      >
+      <Section title="Blocks and trials" description="In schedule order">
         <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
@@ -212,10 +203,7 @@ export function ConfigOverview({ config }: { readonly config: Record<string, unk
       </Section>
 
       {countKeys.length > 0 && (
-        <Section
-          title="Scheduled counts"
-          description="Minimum the scheduler guarantees at every level vs planned at L2"
-        >
+        <Section title="Scheduled counts" description="Guaranteed minimum vs planned at L2">
           <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader>

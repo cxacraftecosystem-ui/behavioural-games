@@ -16,7 +16,8 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { ALL_STUDIES, ROLE_LABELS } from '@/lib/auth/permissions';
 import { isAdmin } from '@/lib/auth/principal';
 
-export function UserMenu() {
+/** The account menu. Mounted twice (island and phone top bar), so each copy takes its own test id. */
+export function UserMenu({ testId = 'user-menu' }: { readonly testId?: string }) {
   const { principal, signOut, config, expiresAt, passwordChangeRequired } = useAuth();
   const router = useRouter();
   if (!principal) return null;
@@ -24,11 +25,19 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2" data-testid="user-menu">
-          <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <UserIcon className="size-3.5" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 rounded-full"
+          data-testid={testId}
+          aria-label={`Account: ${principal.sub}`}
+        >
+          <span className="flex size-6 items-center justify-center rounded-full bg-accent text-accent-foreground">
+            <UserIcon className="size-3.5" aria-hidden="true" />
           </span>
-          <span className="hidden max-w-40 truncate sm:inline">{principal.sub}</span>
+          <span className="hidden max-w-40 truncate sm:inline lg:hidden xl:inline">
+            {principal.sub}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">

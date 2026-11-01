@@ -58,7 +58,6 @@ export function FairnessTab({
       <Alert variant="info">
         <AlertTitle>A non-significant difference is not equivalence</AlertTitle>
         <AlertDescription>
-          Equivalence is shown by TOST bounds and invariance steps, and needs adequate samples.
           Cells below {formatInteger(science.gates.fairnessCellMinN)} participants are suppressed.
           {untested.length > 0 && (
             <span className="block">
@@ -239,7 +238,7 @@ export function FairnessTab({
 
       <Section
         title="Group equivalence and differential prediction"
-        description="Welch TOST on indicator means (equivalence bound in SD units), missingness gaps, and Cleary differential prediction / calibration by group."
+        description="Welch TOST on means, missingness gaps, and Cleary differential prediction by group."
       >
         <div className="grid gap-4">
           <ResultTable

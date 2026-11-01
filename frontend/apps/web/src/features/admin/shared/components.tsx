@@ -1,7 +1,7 @@
 'use client';
 
 import { type QueryKey, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlugZapIcon, PlusIcon, ShieldCheckIcon, XIcon } from 'lucide-react';
+import { PlusIcon, ShieldCheckIcon, XIcon } from 'lucide-react';
 import { type ReactNode, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,43 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { errorMessage } from '@/lib/api/errors';
 import { cn } from '@/lib/utils';
-import { MISSING_ENDPOINTS, type MissingEndpointId } from './missing-endpoints';
 import { checkApprovers } from './two-person';
-
-/** Inline notice for a capability whose API endpoint does not exist yet (no faked data). */
-export function NeedsApi({
-  endpoint,
-  className,
-  compact,
-}: {
-  readonly endpoint: MissingEndpointId;
-  readonly className?: string;
-  readonly compact?: boolean;
-}) {
-  const e = MISSING_ENDPOINTS[endpoint];
-  return (
-    <div
-      data-slot="needs-api"
-      data-endpoint={e.id}
-      className={cn(
-        'flex items-start gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground',
-        className,
-      )}
-    >
-      <PlugZapIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-      <div className="min-w-0 space-y-0.5">
-        <p>
-          <span className="font-medium text-foreground/80">Needs API</span>{' '}
-          <code className="font-mono text-[11px]">
-            {e.method} {e.path}
-          </code>{' '}
-          <span className="opacity-80">({e.feature})</span>
-        </p>
-        {!compact && <p>{e.purpose}</p>}
-      </div>
-    </div>
-  );
-}
 
 /** Small definition list for record details. */
 export function KeyValues({

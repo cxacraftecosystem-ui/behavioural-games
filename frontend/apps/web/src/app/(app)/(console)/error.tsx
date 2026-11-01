@@ -14,5 +14,5 @@ export default function ConsoleError({
   useEffect(() => {
     console.error('[console] page error', error);
   }, [error]);
-  return <ErrorState error={error} title="This page hit an error" onRetry={reset} />;
+  return <ErrorState error={error} title="Something went wrong" onRetry={reset} />;
 }

@@ -48,7 +48,7 @@ export function useSnapshotSelection(): SnapshotSelection {
     blocker = (
       <EmptyState
         title="No study in scope"
-        description="Create a study (or ask for access to one) to see its validation evidence."
+        description="Create a study, or ask for access to one."
         action={
           <Button asChild size="sm" variant="outline">
             <Link href="/research/studies">Go to studies</Link>
@@ -63,7 +63,7 @@ export function useSnapshotSelection(): SnapshotSelection {
       <EmptyState
         icon={DatabaseIcon}
         title="No analysis snapshot yet"
-        description="Build a matched participant × occasion snapshot in Studies → Datasets, then run the analyses. Statistics are only ever computed from a snapshot."
+        description="Build a snapshot in the study’s Datasets tab first."
         action={
           <Button asChild size="sm" variant="outline">
             <Link href={`/research/studies/${encodeURIComponent(study.study_id)}?tab=datasets`}>

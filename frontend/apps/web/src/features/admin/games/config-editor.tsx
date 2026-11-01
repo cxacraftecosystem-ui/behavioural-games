@@ -11,11 +11,12 @@ import {
 } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Section } from '@/components/data/page-header';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { canonicalJson, downloadText, parseJson, sha256Hex } from '../shared/canonical-json';
-import { Hash, NeedsApi } from '../shared/components';
+import { Hash } from '../shared/components';
 import { checkGameConfig, LOCKED_FIELDS, MEASUREMENT_FIELDS } from './config-checks';
 import { DiffList } from './diff-list';
 
@@ -77,10 +78,7 @@ export function ConfigEditor({
           <Alert>
             <LockIcon aria-hidden="true" />
             <AlertTitle>Read-only: this version is approved</AlertTitle>
-            <AlertDescription>
-              Approved versions are frozen. Edit the latest draft, or bump the version in
-              content/games and sync to start a new one.
-            </AlertDescription>
+            <AlertDescription>Edit the latest draft, or start a new version.</AlertDescription>
           </Alert>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -94,7 +92,7 @@ export function ConfigEditor({
             )}
           </p>
           {!readOnly && (
-            <div className="flex gap-2">
+            <ActionGroup align="end">
               <Button
                 variant="outline"
                 size="sm"
@@ -121,7 +119,7 @@ export function ConfigEditor({
                 <DownloadIcon aria-hidden="true" />
                 Download {fileName}
               </Button>
-            </div>
+            </ActionGroup>
           )}
         </div>
         <Textarea
@@ -132,14 +130,15 @@ export function ConfigEditor({
           onChange={(e) => setText(e.target.value)}
           className="h-[34rem] resize-y font-mono text-xs leading-5"
         />
-        {!readOnly && <NeedsApi endpoint="gameDraftCreate" />}
+        {!readOnly && (
+          <p className="text-xs text-muted-foreground">
+            To save, commit the downloaded file and run Sync.
+          </p>
+        )}
       </div>
 
       <div className="space-y-5">
-        <Section
-          title="Validation"
-          description="game-config.v1 schema, invariants and change control"
-        >
+        <Section title="Validation" description="Schema, invariants and change control">
           {!parsed.ok ? (
             <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
               <XCircleIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -198,10 +197,7 @@ export function ConfigEditor({
           </Section>
         )}
 
-        <Section
-          title="Locked fields"
-          description="Science, measurement-tagging and privacy fields change only through a signed amendment (PLT-09)"
-        >
+        <Section title="Locked fields" description="Change only through a signed amendment">
           <details className="group text-xs" data-testid="locked-fields">
             <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
               {LOCKED_FIELDS.length} locked paths

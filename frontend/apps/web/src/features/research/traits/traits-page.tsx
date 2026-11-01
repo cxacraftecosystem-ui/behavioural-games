@@ -88,7 +88,7 @@ export function TraitsPage({ science }: { readonly science: ScienceConfig }) {
     <div className="space-y-6">
       <PageHeader
         title="Traits"
-        description="The competency model from the versioned scoring dictionary: what each construct claims, which behaviour counts as evidence, which tasks produce it, and how it is expected to relate to criterion scales. Nothing here is a validated score."
+        description="What each construct claims, its evidence, its tasks and expected relations. Not validated scores."
         meta={
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline" className="font-mono">
@@ -297,7 +297,7 @@ function TraitDetail({
 
       <Section
         title={`Indicators (${indicators.length})`}
-        description="Versioned behavioural indicators; values below the minimum valid trials are null with an insufficient_trials flag, never imputed."
+        description="Too few valid trials gives no value, never an imputed one."
       >
         <ResultTable
           exportName={`indicators-${construct.construct_id}`}
@@ -367,7 +367,7 @@ function TraitDetail({
 
       <Section
         title="Expected relations"
-        description="Pre-registered criterion relations. Expected r ranges are literature expectations, not acceptance thresholds; gates use the observed lower bound (gates.yaml B3)."
+        description="Expected r ranges are expectations, not thresholds. Gates use the observed lower bound."
       >
         <ResultTable
           exportName={`relations-${construct.construct_id}`}
@@ -425,10 +425,7 @@ function TraitDetail({
       </Section>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Section
-          title="Approval status"
-          description="Recorded trait-gate status per language and pathway (release-pack input)."
-        >
+        <Section title="Approval status" description="Status per language and pathway.">
           {(cap || withholds.length > 0) && (
             <Alert variant="warning">
               <LockIcon aria-hidden="true" />
@@ -468,7 +465,7 @@ function TraitDetail({
         </Section>
         <Section
           title="Version history"
-          description="Dictionary and gate-rule versions, and every recorded status change for this construct."
+          description="Every recorded status change for this construct."
         >
           <ResultTable
             rows={gates}

@@ -11,6 +11,7 @@ import { ErrorState, LoadingState } from '@/components/data/states';
 import { StatusBadge } from '@/components/data/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import {
   Select,
   SelectContent,
@@ -53,7 +54,7 @@ export function StudiesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Studies"
-        description="Study protocols, cohorts, stratified recruitment, arms, retest scheduling, deviations, dataset freeze and analysis-plan registration."
+        description="Protocols, cohorts, recruitment, retests and analysis plans."
         actions={
           <Can all={['studies.write']}>
             <CreateStudyDialog
@@ -120,12 +121,7 @@ export function StudiesPage() {
                 const q = quotaProgress(d.quotas);
                 return (
                   <div className="min-w-40 space-y-1">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${Math.min(100, (q.share ?? 0) * 100)}%` }}
-                      />
-                    </div>
+                    <ProgressBar value={q.share ?? 0} decorative />
                     <span className="text-xs text-muted-foreground">
                       {formatInteger(q.enrolled)} / {formatInteger(q.target || s.target_sample)} ·{' '}
                       {pct(q.share, 0)}
@@ -206,7 +202,7 @@ function CreateStudyDialog({ onCreated }: { readonly onCreated: (id: string) => 
   return (
     <FormDialog
       title="Create a study"
-      description="Starts as a draft. Stages from S2 onwards require a pre-registered analysis plan before confirmatory analyses."
+      description="Starts as a draft. From S2, confirmatory analyses need a registered plan."
       trigger={
         <Button size="sm">
           <PlusIcon aria-hidden="true" /> New study

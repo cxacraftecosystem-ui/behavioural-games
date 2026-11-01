@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DEMO_BANNER_TITLE, DEMO_MODE, DEMO_READ_ONLY_MESSAGE } from '@/lib/demo';
+import { DEMO_BANNER_TITLE, DEMO_MODE } from '@/lib/demo';
 
 export const metadata: Metadata = { title: { absolute: 'SHRIII Behavioural Games' } };
 
@@ -19,21 +20,21 @@ const SECTIONS = [
     title: 'Kiosk game',
     icon: Gamepad2Icon,
     cta: 'Play the kiosk',
-    text: 'The full-screen public kiosk: a golden-hour village market fair with spoken guidance, touch-only play and two pathways (story episodes or a carousel of micro-games). No scores are shown during play.',
+    text: 'Voice-guided village-fair games. Touch only, no reading, no scores.',
   },
   {
     href: '/research',
     title: 'Research console',
     icon: MicroscopeIcon,
     cta: 'Open research',
-    text: 'Studies, participants, criterion instruments, indicators and the Trait Validation Workbench: reliability, convergent validity, fairness and the release gates.',
+    text: 'Studies, participants, instruments and trait validation.',
   },
   {
     href: '/admin',
     title: 'Admin console',
     icon: ShieldIcon,
     cta: 'Open admin',
-    text: 'Kiosk fleet health, game configurations with two-person approval, content and voice-line coverage, deployment policy and audit.',
+    text: 'Kiosk fleet, game approvals, content and policy.',
   },
 ] as const;
 
@@ -41,26 +42,24 @@ const SECTIONS = [
 export default function HomePage() {
   return (
     <div className="min-h-dvh bg-background">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-12 sm:py-16">
-        <header className="space-y-4">
-          <div className="flex items-center gap-2">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-12 sm:py-20">
+        <header className="space-y-5">
+          <div className="flex items-center gap-2.5">
             <span
               aria-hidden="true"
-              className="flex size-8 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground"
+              className="grad-brand grid size-9 place-items-center rounded-full font-display text-sm font-bold text-white"
             >
               S
             </span>
-            <span className="text-sm font-semibold">SHRIII</span>
+            <span className="font-display text-sm font-semibold tracking-tight">SHRIII</span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          <p className="eyebrow">Behavioural assessment</p>
+          <h1 className="display-title text-4xl text-balance sm:text-5xl">
             Kiosk Behavioural Games
           </h1>
-          <p className="max-w-3xl text-base text-pretty text-muted-foreground">
-            A research-grade behavioural assessment platform. Adults play short, voice-guided games
-            on a public kiosk; every tap is logged as a raw event, turned into behavioural
-            indicators by a versioned scoring dictionary, and validated against criterion
-            instruments before any trait estimate or participant report is released. Touch is always
-            enough, nothing needs reading, and reports stay off until the validation gates pass.
+          <p className="max-w-2xl text-base leading-7 text-pretty text-muted-foreground">
+            Short, voice-guided games on a public kiosk, validated against criterion instruments
+            before any result is released.
           </p>
         </header>
 
@@ -68,13 +67,12 @@ export default function HomePage() {
           <div
             role="note"
             data-testid="demo-banner"
-            className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-100 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+            className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-foreground"
           >
-            <FlaskConicalIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <FlaskConicalIcon className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
             <p>
-              <strong className="font-semibold">Public demo · {DEMO_BANNER_TITLE}.</strong> The
-              consoles use a demo sign-in (pick a role, no credentials) and synthetic fixtures; the
-              kiosk plays fully offline and uploads nothing. {DEMO_READ_ONLY_MESSAGE}
+              <strong className="font-semibold">Demo</strong> · {DEMO_BANNER_TITLE}. Read-only; the
+              kiosk runs offline.
             </p>
           </div>
         )}
@@ -83,25 +81,31 @@ export default function HomePage() {
           {SECTIONS.map(({ href, title, icon: Icon, cta, text }) => (
             <Card key={href} className="flex flex-col">
               <CardHeader>
-                <Icon className="mb-1 size-5 text-primary" aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className="mb-2 grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground"
+                >
+                  <Icon className="size-5" />
+                </span>
                 <CardTitle className="text-lg">{title}</CardTitle>
                 <CardDescription>{text}</CardDescription>
               </CardHeader>
               <CardContent className="mt-auto">
-                <Button asChild className="w-full">
-                  <Link href={href}>
-                    {cta}
-                    <ArrowRightIcon />
-                  </Link>
-                </Button>
+                <ActionGroup fill>
+                  <Button asChild>
+                    <Link href={href}>
+                      {cta}
+                      <ArrowRightIcon aria-hidden="true" />
+                    </Link>
+                  </Button>
+                </ActionGroup>
               </CardContent>
             </Card>
           ))}
         </div>
 
         <footer className="text-xs text-muted-foreground">
-          Nothing here is validated on real participants yet; every scientific output is
-          research-only.
+          Research use only. Not yet validated on real participants.
         </footer>
       </main>
     </div>
