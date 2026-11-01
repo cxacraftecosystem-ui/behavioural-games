@@ -3,7 +3,7 @@
 Everything the pipelines run that is not a workflow definition: CI gates, CI helper scripts and their tests.
 
 GitHub only reads workflow files from `.github/workflows/` at the repository root, so the workflow YAML (and
-the CodeQL config and Renovate config it uses) stays under `.github/`. Workflows call into this directory
+the CodeQL config and Dependabot config it uses) stays under `.github/`. Workflows call into this directory
 for the actual logic, which keeps the scripts testable with plain `pytest` and runnable on a laptop.
 
 | Path | What it is | Run locally |
@@ -34,4 +34,4 @@ All tool tests at once: `uv run pytest cicd/plan-lint cicd/trial-budget cicd/scr
 | `nightly-sim.yml` | nightly, manual | Full parameter-recovery run (n = 400) and the slow simulator/validation tests; opens an issue on failure. |
 | `loadtest.yml` | nightly, manual, PRs touching the harness | Ingestion load test against PostgreSQL 18; results are uploaded as the `loadtest-<run id>` artifact. |
 
-Renovate reads its configuration from `.github/renovate.json`.
+Dependabot reads its configuration from `.github/dependabot.yml`.

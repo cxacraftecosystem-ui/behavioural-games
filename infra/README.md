@@ -51,6 +51,6 @@ docker compose -f infra/compose/compose.full.yml down -v
 Repository settings the workflows expect: variables `AWS_ROLE_ARN`, `AWS_REGION`, `ECR_REGISTRY`, `TOFU_STATE_BUCKET`,
 optional `COSIGN_KEYLESS`, `PRODUCTION_CONTRACTS_REF`; secrets `COSIGN_PRIVATE_KEY`, `COSIGN_PASSWORD`
 (placeholders until the signing ceremony; releases fail closed without signing material); GitHub environments
-`staging` and `production` (production requires reviewers). Renovate (`.github/renovate.json`) applies updates after
-soak periods: 7 days by default, 21 days for the scientific Python stack and the kiosk runtime, 30 days for majors,
-none for security fixes.
+`staging` and `production` (production requires reviewers). Dependabot (`.github/dependabot.yml`) proposes updates weekly
+after soak periods: 7 days by default, 14 days for OpenTofu providers, 30 days for majors, none for security fixes.
+The scientific Python stack and the kiosk runtime are grouped into their own PRs for separate review.

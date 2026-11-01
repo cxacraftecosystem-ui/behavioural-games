@@ -30,8 +30,8 @@ Checklist for the pull request (reviewer confirms each item):
 | Scan | `pip-audit` / `pnpm audit` / OSV clean for the new tree, or findings triaged in the PR. |
 | Kiosk impact | Anything in the kiosk bundle also needs a bundle-size check and must not add network calls or telemetry (CSP `connect-src` is fixed). |
 
-Upgrades: automated PRs (Renovate) grouped weekly for patch/minor, monthly for major; security fixes
-immediately. During a **wave freeze** (KSK-11), kiosk dependencies change only through a PLT-09 emergency
+Upgrades: automated PRs (Dependabot, `.github/dependabot.yml`) weekly, patch/minor grouped, majors one per PR after a
+30-day soak; security fixes immediately. During a **wave freeze** (KSK-11), kiosk dependencies change only through a PLT-09 emergency
 record.
 
 ## 3. Lockfiles and installation
@@ -41,7 +41,7 @@ record.
 | Python (uv workspace) | `uv.lock` committed. CI runs `uv sync --locked` (fails on drift). Production images install from the lock with hashes (`uv export --format requirements-txt` keeps hashes by default; install with `pip install --require-hashes` or `uv pip sync`). Python version pinned in `requires-python` and the image tag pinned by digest. |
 | JavaScript (pnpm 12 workspace) | `pnpm-lock.yaml` committed. CI runs `pnpm install --frozen-lockfile`. Set in `pnpm-workspace.yaml`: `minimumReleaseAge: 10080` (7 days) and an explicit `onlyBuiltDependencies` allow-list so dependency install scripts do not run unless approved (pnpm blocks lifecycle scripts by default). |
 | Containers | Base images pinned by digest (`python:3.14-slim@sha256:...`, `postgres:18@sha256:...`); rebuilt weekly for OS patches. |
-| GitHub Actions | Third-party actions pinned by full commit SHA with a version comment; Renovate updates them. |
+| GitHub Actions | Third-party actions pinned by full commit SHA with a version comment; Dependabot updates them. |
 | Kiosk OS | Snap revisions pinned per ring and per wave with validation sets ([kiosk-hardening-ubuntu-core.md](kiosk-hardening-ubuntu-core.md) §8). |
 
 ## 4. Automated checks in CI

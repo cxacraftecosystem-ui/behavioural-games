@@ -47,7 +47,7 @@ did not change in the October 2026 reorganisation (`@shriii/kiosk-game`, `@shrii
 ├─ docs/                         IMPLEMENTATION_PLAN.md, BUILD_DECISIONS.md, ARCHITECTURE.md (this file),
 │                                reference/, governance/, security/, screenshots/
 ├─ config/                       tsconfig.base.json (extended by every package tsconfig)
-└─ .github/                      workflows/ (must stay here), codeql/, renovate.json
+└─ .github/                      workflows/ (must stay here), codeql/, dependabot.yml
 ```
 
 ## The repository root
@@ -63,7 +63,7 @@ The root holds only files that a tool insists on finding there:
 | `pyproject.toml`, `uv.lock` | uv workspace root; also holds the ruff, mypy and pytest settings and the Python floor (`requires-python`) |
 | `.gitignore`, `.gitattributes` | git reads them from the root (`.gitattributes` enforces LF endings) |
 | `README.md` | Rendered by GitHub |
-| `.github/` | GitHub Actions, CodeQL and Renovate only read it there |
+| `.github/` | GitHub Actions, CodeQL and Dependabot only read it there |
 
 Everything else lives below the root:
 
@@ -172,7 +172,7 @@ started from (normally the root). `infra/compose/.env.example` documents both.
 | `.github/scripts` | `cicd/scripts` |
 | `.github/e2e/smoke.py` | `cicd/e2e/smoke.py` |
 | `docker-compose.yml`, `.env.example` | `infra/compose/docker-compose.yml`, `infra/compose/.env.example` |
-| `renovate.json` | `.github/renovate.json` |
+| `renovate.json` | removed (Dependabot: `.github/dependabot.yml`) |
 | `tools/loadtest/results/**` | removed (CI artifact `loadtest-<run id>`; earlier runs remain in git history) |
 
 Unchanged: `content/`, `docs/`, `infra/docker`, `infra/tofu`, `infra/compose/compose.full.yml`,
