@@ -23,6 +23,11 @@ interface ImportMetaEnv {
   readonly VITE_E2E_BRIDGE?: string;
   /** Kiosk id (bridge builds only). */
   readonly VITE_KIOSK_ID?: string;
+  /**
+   * Release-pack public keys pinned into this build, as JSON `{"key_id": "base64 raw Ed25519 key"}`
+   * (CI variable RELEASE_PACK_PUBLIC_KEYS). Remote commands signed with any other key are refused.
+   */
+  readonly VITE_PINNED_RELEASE_KEYS?: string;
   /** Kiosk device token for event upload (bridge builds only). */
   readonly VITE_DEVICE_TOKEN?: string;
   /** `ci-headless-test` selects the test-only certified timing profile (bridge builds only). */

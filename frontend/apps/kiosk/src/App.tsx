@@ -80,6 +80,7 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
       audioFactory: AUDIO_FACTORY,
       ...(config.kioskId ? { device: { kioskId: config.kioskId } } : {}),
       ...(deviceToken ? { deviceToken } : {}),
+      pinnedReleaseKeys: config.pinnedReleaseKeys,
       // Test bridge builds run on software GL in CI: keep animations on wall-clock time.
       ...(config.bridge ? { wallClockAnimations: true } : {}),
       ...(config.pxPerMm ? { pxPerMm: config.pxPerMm } : {}),

@@ -44,7 +44,7 @@ import type { KioskOutbox } from '../logging/outbox/types.ts';
 import { recoverInterruptedSessions } from '../logging/recovery.ts';
 import { BatchUploader } from '../logging/uploader.ts';
 import { developmentDeviceConfig, type KioskDeviceConfig } from './device.ts';
-import { RemoteCommandClient } from './remote-commands.ts';
+import { muteWhileLocked, RemoteCommandClient } from './remote-commands.ts';
 import { SessionController } from './session-controller.ts';
 import { isOnboardingArt, StageScreens } from './stage-screens.ts';
 import { destroyStage, installTweenSafeDestroy } from './stage-teardown.ts';
@@ -81,6 +81,11 @@ export interface KioskRuntimeOptions {
   readonly stageScreens?: boolean;
   /** Kiosk device token for the batch uploader (`Authorization: Bearer ...`). */
   readonly deviceToken?: string | null;
+  /**
+   * Release-pack verification keys pinned at build time (key_id -> base64 Ed25519 key). Remote
+   * commands run only when signed with one of these; none pinned = every command is refused.
+   */
+  readonly pinnedReleaseKeys?: Readonly<Record<string, string>>;
   /** Wrap the module host in the Pathway B carousel hub (fair-map bridges; default true). */
   readonly hub?: boolean;
   /**
@@ -333,6 +338,7 @@ export async function createKioskRuntime(
   // attract. The same signal that keeps uploads out of play keeps commands out of play.
   const remote = new RemoteCommandClient({
     apiBase: options.apiBase ?? null,
+    pinnedKeys: options.pinnedReleaseKeys ?? {},
     deviceToken: token,
     kioskId: device.kioskId,
     isIdle: () => !uploader.isPaused && controller.snapshot.state === 'attract',
@@ -351,6 +357,8 @@ export async function createKioskRuntime(
     },
   });
   remote.start();
+  // A locked kiosk is silent too: the attract greeting must not call out from an out-of-service screen.
+  const unmute = muteWhileLocked(remote, audio, voice);
 
   const useStage = options.stageScreens !== false && isOnboardingArt(art);
   const stageScreens = useStage
@@ -383,6 +391,7 @@ export async function createKioskRuntime(
     remote,
     stageScreens: useStage,
     dispose() {
+      unmute();
       remote.stop();
       stageScreens?.dispose();
       unsub();

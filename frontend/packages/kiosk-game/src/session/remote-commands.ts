@@ -149,6 +149,57 @@ export interface RemoteCommandClientOptions {
   /** Ceiling for the failure backoff (default 15 min). */
   readonly maxBackoffMs?: number;
   readonly timeoutMs?: number;
+  /**
+   * Release-pack verification keys pinned into this build (key_id -> base64 raw Ed25519 public key),
+   * from CI config. Only a command signed with a pinned key runs; with none pinned, every command is
+   * refused (fail closed). The server's advertised key is still fetched, only to notice a rotation.
+   */
+  readonly pinnedKeys?: Readonly<Record<string, string>>;
+}
+
+/** What the lock needs from the audio side: the master volume and a way to stop speech. */
+export interface LockableAudio {
+  readonly masterVolume: number;
+  setMasterVolume(volume: number): void;
+}
+
+/**
+ * Silence the kiosk while a remote lock is in force: the attract loop keeps scheduling its greeting,
+ * but nothing reaches the speakers until unlock, when the volume the kiosk had comes back. Returns the
+ * unsubscribe function.
+ */
+export function muteWhileLocked(
+  lock: { subscribeLock(listener: (locked: boolean) => void): () => void },
+  audio: LockableAudio,
+  voice: { stop(): void },
+): () => void {
+  let restore: number | null = null;
+  return lock.subscribeLock((locked) => {
+    if (locked && restore === null) {
+      restore = audio.masterVolume;
+      voice.stop();
+      audio.setMasterVolume(0);
+    } else if (!locked && restore !== null) {
+      audio.setMasterVolume(restore);
+      restore = null;
+    }
+  });
+}
+
+/** Parse the build-time `{"key_id": "base64 key"}` JSON; anything malformed pins nothing. */
+export function parsePinnedKeys(raw: string | null | undefined): Record<string, string> {
+  if (!raw?.trim()) return {};
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+    const out: Record<string, string> = {};
+    for (const [id, key] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof key === 'string' && /^[A-Za-z0-9+/]{43}=$/.test(key)) out[id] = key;
+    }
+    return out;
+  } catch {
+    return {};
+  }
 }
 
 export type PollOutcome =
@@ -192,7 +243,10 @@ export class RemoteCommandClient {
   private readonly pollMs: number;
   private readonly maxBackoffMs: number;
   private state: CommandState;
-  private key: { readonly keyId: string; readonly key: CryptoKey } | null = null;
+  private readonly keys = new Map<string, CryptoKey>();
+  /** A key the server advertises that this build does not pin (a rotation in progress). */
+  private rotation: { readonly keyId: string; readonly seenAt: number } | null = null;
+  private advertisedCheckedAt = Number.NEGATIVE_INFINITY;
   private timer: unknown = null;
   private busy = false;
   private running = false;
@@ -312,33 +366,48 @@ export class RemoteCommandClient {
     this.persist();
   }
 
-  private async verificationKey(keyId: string, refresh: boolean): Promise<CryptoKey | null> {
-    if (!this.subtle) return null;
-    if (this.key && this.key.keyId === keyId && !refresh) return this.key.key;
-    const res = await this.request('/api/v1/admin/gates/release-pack/public-key', {
-      headers: this.headers(),
-    });
-    if (!res.ok) throw new Error(`public key ${res.status}`);
-    const body = (await res.json()) as { algorithm?: string; key_id?: string; public_key?: string };
-    if (body.algorithm !== 'ed25519' || !body.public_key || !body.key_id) {
-      throw new Error('unexpected public key response');
-    }
-    const key = await this.subtle.importKey(
-      'raw',
-      base64ToBytes(body.public_key),
-      { name: 'Ed25519' },
-      false,
-      ['verify'],
-    );
-    this.key = { keyId: body.key_id, key };
+  /** The pinned key for `keyId`, imported once; null when this build does not pin that key. */
+  private async pinnedKey(keyId: string): Promise<CryptoKey | null> {
+    const raw = this.o.pinnedKeys?.[keyId];
+    if (!raw || !this.subtle) return null;
+    const cached = this.keys.get(keyId);
+    if (cached) return cached;
+    const key = await this.subtle.importKey('raw', base64ToBytes(raw), { name: 'Ed25519' }, false, [
+      'verify',
+    ]);
+    this.keys.set(keyId, key);
     return key;
   }
 
-  private async signatureValid(e: CommandEnvelope): Promise<boolean> {
+  /**
+   * Fetch the key the server advertises (at most hourly) only to notice a rotation: a key that is not
+   * pinned here, or a pinned id with different bytes, is reported in `pull_logs` and never trusted.
+   */
+  private async checkAdvertisedKey(): Promise<void> {
+    if (this.nowMs() - this.advertisedCheckedAt < 3_600_000) return;
+    this.advertisedCheckedAt = this.nowMs();
+    try {
+      const res = await this.request('/api/v1/admin/gates/release-pack/public-key', {
+        headers: this.headers(),
+      });
+      if (!res.ok) return;
+      const body = (await res.json()) as { key_id?: string; public_key?: string };
+      if (!body.key_id || !body.public_key) return;
+      const pinned = this.o.pinnedKeys?.[body.key_id];
+      this.rotation =
+        pinned === body.public_key ? null : { keyId: body.key_id, seenAt: this.nowMs() };
+    } catch {
+      // Detection only: a failed fetch changes nothing.
+    }
+  }
+
+  /** A rotation the kiosk has noticed but cannot follow until a build pins the new key. */
+  get pendingRotation(): string | null {
+    return this.rotation?.keyId ?? null;
+  }
+
+  private async signatureValid(e: CommandEnvelope, key: CryptoKey): Promise<boolean> {
     if (!this.subtle) return false;
-    // Fetched again whenever the envelope names a key other than the cached one (key rotation).
-    const key = await this.verificationKey(e.key_id, false);
-    if (!key || this.key?.keyId !== e.key_id) return false;
     try {
       return await this.subtle.verify(
         { name: 'Ed25519' },
@@ -392,6 +461,8 @@ export class RemoteCommandClient {
           app_version: fx.appVersion,
           outbox: scrubStats(await fx.outboxStats()),
           errors: fx.errorCounts(),
+          pinned_keys: Object.keys(this.o.pinnedKeys ?? {}),
+          ...(this.rotation ? { key_rotation_pending: this.rotation.keyId } : {}),
         });
       case 'restart': {
         // Recorded (and queued for ack) BEFORE the reload: the ack goes out after the restart and
@@ -461,14 +532,16 @@ export class RemoteCommandClient {
     if (Object.values(this.state.executed).some((x) => x.nonce === e.nonce)) {
       return this.fail(e, 'replay');
     }
-    let valid = false;
+    await this.checkAdvertisedKey();
+    let key: CryptoKey | null = null;
     try {
-      valid = await this.signatureValid(e);
+      key = await this.pinnedKey(e.key_id);
     } catch {
-      // Key unavailable: try again next poll without recording anything.
-      return { command_id: e.command_id, status: 'failed', result: {}, error: 'key_unavailable' };
+      key = null;
     }
-    if (!valid) return this.fail(e, 'bad_signature');
+    // Only keys pinned into this build are trusted; a key fetched from the network never is.
+    if (!key) return this.fail(e, 'unpinned_key');
+    if (!(await this.signatureValid(e, key))) return this.fail(e, 'bad_signature');
     if (e.kiosk_id !== this.o.kioskId) return this.fail(e, 'wrong_kiosk');
     const expires = Date.parse(e.expires_at);
     if (!Number.isFinite(expires) || expires <= this.nowMs()) return this.fail(e, 'expired');

@@ -64,6 +64,15 @@ describe('readConfig', () => {
     });
   });
 
+  it('pins release-pack keys in every build (public keys, not bridge-gated)', () => {
+    const key = 'rZp0uZ1Bsr1HFwzm5/8TyyL6aiOHMj1rtG6VDsQdIpY=';
+    const env = { VITE_PINNED_RELEASE_KEYS: JSON.stringify({ 'prod-release-key-1': key }) };
+    expect(readConfig(env as ImportMetaEnv, false).pinnedReleaseKeys).toEqual({
+      'prod-release-key-1': key,
+    });
+    expect(readConfig({} as ImportMetaEnv, false).pinnedReleaseKeys).toEqual({});
+  });
+
   it('selects the ci-headless-test timing profile only in bridge builds', () => {
     const env = { VITE_TEST_TIMING_PROFILE: 'ci-headless-test' } as ImportMetaEnv;
     expect(readConfig(env, false).testTimingProfile).toBe(false);

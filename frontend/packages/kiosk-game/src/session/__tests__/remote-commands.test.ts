@@ -5,6 +5,8 @@ import {
   type CommandEffects,
   type CommandEnvelope,
   MemoryCommandStore,
+  muteWhileLocked,
+  parsePinnedKeys,
   RemoteCommandClient,
   signedPayload,
 } from '../remote-commands.ts';
@@ -57,7 +59,14 @@ const CLEAN: OutboxStats = {
   lastAckAt: null,
 };
 
-function harness(opts: { store?: MemoryCommandStore; token?: string | null } = {}) {
+function harness(
+  opts: {
+    store?: MemoryCommandStore;
+    token?: string | null;
+    pinned?: Record<string, string>;
+    advertised?: { key_id: string; public_key: string };
+  } = {},
+) {
   const acks: { id: string; body: Record<string, unknown> }[] = [];
   const fetchCalls: string[] = [];
   const state = {
@@ -81,7 +90,10 @@ function harness(opts: { store?: MemoryCommandStore; token?: string | null } = {
       'Bearer dev_tok',
     );
     if (url.endsWith('/release-pack/public-key')) {
-      return Response.json({ algorithm: 'ed25519', key_id: 'k1', public_key: publicKeyB64 });
+      return Response.json({
+        algorithm: 'ed25519',
+        ...(opts.advertised ?? { key_id: 'k1', public_key: publicKeyB64 }),
+      });
     }
     if (url.endsWith('/kiosk-device/commands')) return Response.json(state.queue);
     const ack = /\/kiosk-device\/commands\/([^/]+)\/ack$/.exec(url);
@@ -102,6 +114,7 @@ function harness(opts: { store?: MemoryCommandStore; token?: string | null } = {
     fetch: fetchImpl,
     subtle,
     nowMs: () => NOW,
+    pinnedKeys: opts.pinned ?? { k1: publicKeyB64 },
   });
   return { client, effects, acks, fetchCalls, state };
 }
@@ -236,7 +249,51 @@ describe('RemoteCommandClient', () => {
         sessions_awaiting_consent: 0,
       },
       errors: { session_errors: 2, upload_failures: 0 },
+      pinned_keys: ['k1'],
     });
+  });
+
+  it('trusts only keys pinned into the build', async () => {
+    // Signed correctly, but with a key id this build does not pin: refused.
+    const h = harness({ pinned: {} });
+    h.state.queue = [await envelope('lock')];
+    await h.client.pollOnce();
+    expect(h.client.locked).toBe(false);
+    expect(h.acks[0]?.body).toEqual({ status: 'failed', result: {}, error: 'unpinned_key' });
+
+    // A key served by the API under the pinned id but with other bytes is never used.
+    const other = (await subtle.generateKey({ name: 'Ed25519' }, true, [
+      'sign',
+      'verify',
+    ])) as CryptoKeyPair;
+    const otherB64 = Buffer.from(await subtle.exportKey('raw', other.publicKey)).toString('base64');
+    const swapped = harness({ pinned: { k1: otherB64 } });
+    swapped.state.queue = [await envelope('lock')];
+    await swapped.client.pollOnce();
+    expect(swapped.client.locked).toBe(false);
+    expect(swapped.acks[0]?.body.error).toBe('bad_signature');
+  });
+
+  it('notices a rotation it cannot follow and reports it', async () => {
+    const h = harness({ advertised: { key_id: 'k2', public_key: publicKeyB64 } });
+    h.state.queue = [await envelope('pull_logs')];
+    await h.client.pollOnce();
+    expect(h.client.pendingRotation).toBe('k2');
+    const result = h.acks[0]?.body.result as Record<string, unknown>;
+    expect(result.key_rotation_pending).toBe('k2');
+    // A command signed under the new, unpinned id is refused until a build pins it.
+    h.state.queue = [await envelope('lock', { key_id: 'k2' })];
+    await h.client.pollOnce();
+    expect(h.client.locked).toBe(false);
+    expect(h.acks.at(-1)?.body.error).toBe('unpinned_key');
+  });
+
+  it('parses the build-time pin list and ignores anything malformed', () => {
+    expect(parsePinnedKeys(JSON.stringify({ k1: publicKeyB64 }))).toEqual({ k1: publicKeyB64 });
+    expect(parsePinnedKeys('')).toEqual({});
+    expect(parsePinnedKeys('not json')).toEqual({});
+    expect(parsePinnedKeys(JSON.stringify({ k1: 'short' }))).toEqual({});
+    expect(parsePinnedKeys('["k1"]')).toEqual({});
   });
 
   it('syncs on request', async () => {
@@ -245,5 +302,26 @@ describe('RemoteCommandClient', () => {
     await h.client.pollOnce();
     expect(h.effects.sync).toHaveBeenCalledTimes(1);
     expect(h.acks[0]?.body.status).toBe('acknowledged');
+  });
+
+  it('silences the kiosk while locked and restores its volume on unlock', async () => {
+    const h = harness();
+    const audio = {
+      masterVolume: 0.8,
+      setMasterVolume(v: number) {
+        this.masterVolume = v;
+      },
+    };
+    const voice = { stop: vi.fn() };
+    const unsubscribe = muteWhileLocked(h.client, audio, voice);
+    expect(audio.masterVolume).toBe(0.8);
+    h.state.queue = [await envelope('lock')];
+    await h.client.pollOnce();
+    expect(audio.masterVolume).toBe(0);
+    expect(voice.stop).toHaveBeenCalledTimes(1);
+    h.state.queue = [await envelope('unlock')];
+    await h.client.pollOnce();
+    expect(audio.masterVolume).toBe(0.8);
+    unsubscribe();
   });
 });

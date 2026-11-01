@@ -137,6 +137,23 @@ release.
 Pushes to `main` that touch the backend build and push both images (`.github/workflows/images.yml`); the
 deploy is a separate, deliberate step (the command above).
 
+### Provisioning a kiosk's device token
+
+Each kiosk authenticates uploads and remote-command polling with its own device token (`kdt_…`). The
+token is shown **once** when the kiosk is registered and only its digest is stored on the server.
+
+1. In the console, **Admin → Kiosks → Register kiosk** (kiosk id, site). Copy the token from the dialog
+   before closing it (rotating later issues a new one and invalidates the old one immediately).
+2. Put it on the kiosk with the enrolment bundle (`shriii-provision push`, or
+   `snap set shriii-kiosk enrolment-bundle=<base64>`; see `infra/kiosk-image/README.md`). Enrolment writes
+   it to `$SNAP_COMMON/secrets/device-token` (0600) and `kiosk-launch` exports it to the runtime as
+   `SHRIII_DEVICE_TOKEN`. Outside the snap (a lab machine), set `SHRIII_DEVICE_TOKEN=kdt_…` in the
+   service environment or `"deviceToken": "kdt_…"` in `kiosk-config.json` (root-owned, `chmod 600`).
+   Never put it in the app bundle. The runtime refuses to start with a malformed token.
+3. Restart the kiosk app (`snap restart shriii-kiosk`). Within a minute **Admin → Kiosks → (kiosk) → Remote commands → Pull logs**
+   should come back acknowledged; its result lists the pinned release keys.
+4. Lost or retired kiosk: **Revoke** in the console (the token stops working at once).
+
 ### Synthetic data on production
 
 `synthetic.sh smoke` seals the batches of one simulated session to the backend X25519 key (AES-256-GCM, as a
@@ -269,7 +286,7 @@ Screenshots: [`live-research.jpg`](../screenshots/deploy/live-research.jpg),
 |---|---|
 | `LOCAL_JWT_SECRET` | put a new 48-byte base64 value, then deploy. Every staff token becomes invalid; staff sign in again. |
 | Database passwords | re-run `infra/supabase/bootstrap_roles.py` (it rewrites the passwords and both URLs in SSM), then deploy. |
-| `RELEASE_PACK_SIGNING_KEY` | put a new key, bump `RELEASE_PACK_KEY_ID` in `api.prod.env`, deploy. Old packs stay verifiable only with the old public key, so archive it first. |
+| `RELEASE_PACK_SIGNING_KEY` | Kiosks pin this key's public half at build time (remote commands signed with any other key are refused), so rotate in three steps: **1.** generate the new key offline and add its public half to the repository variable `RELEASE_PACK_PUBLIC_KEYS` beside the current one (`{"prod-release-key-1": "…", "prod-release-key-2": "…"}`); **2.** cut a kiosk release (`kiosk-release.yml`) and let every kiosk update — `pull_logs` reports `pinned_keys` per kiosk; **3.** put the new private key in SSM, bump `RELEASE_PACK_KEY_ID`, deploy, and later drop the old id from the variable in the next kiosk release. A kiosk that sees the server advertise a key it does not pin reports `key_rotation_pending` and keeps refusing commands. Old packs stay verifiable only with the old public key, so archive it first. |
 | `BACKEND_X25519_PRIVATE_KEY` | kiosks seal to the public key returned at registration. Re-register (or re-key) every kiosk in the same change, and drain every outbox first: batches sealed to the old key can no longer be opened. |
 | `SESSION_KEY_KEK`, `IDENTITY_VAULT_KEY`, `PID_HMAC_PEPPER` | **do not rotate in place.** Stored session keys and vault contact data are encrypted under them, and pid derivation depends on the pepper (`PID_PEPPER_VERSION`). Rotation needs a re-wrap migration; plan it separately. |
 

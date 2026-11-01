@@ -983,10 +983,16 @@ scripts find targets by `data-target` ids — keep both.
 
 `session/remote-commands.ts` polls `GET /api/v1/admin/kiosk-device/commands` with the device token,
 once at start and every 60 s, **only while the kiosk is idle in attract** (the uploader's pause signal).
-Each envelope is Ed25519-signed by the server for this kiosk; the client verifies the signature, the
-kiosk id, the expiry and that the nonce is new (executed ids and nonces persist across restarts), runs
-the command, then acks it. `lock` shows `RemoteLockScreen` — a static, text-free padlock with an
-accessible name that swallows every touch — until `unlock`, and survives a reboot. `wipe` refuses while
+Each envelope is Ed25519-signed by the server for this kiosk; the client verifies the signature **with
+a key pinned into the build** (`VITE_PINNED_RELEASE_KEYS` from the CI variable `RELEASE_PACK_PUBLIC_KEYS`;
+a key fetched from the network is never trusted — it is fetched hourly only to notice a rotation, which
+`pull_logs` reports as `key_rotation_pending`), the kiosk id, the expiry and that the nonce is new
+(executed ids and nonces persist across restarts), runs the command, then acks it. No pinned key = every
+command refused (`unpinned_key`). Rotation order: pin the new key in a kiosk release first, rotate the
+server second (docs/deploy/aws-ec2.md, Rotating secrets). `lock` shows `RemoteLockScreen` — a static, text-free padlock with an
+accessible name that swallows every touch — until `unlock`, and survives a reboot. While locked the
+kiosk is also silent (`muteWhileLocked`: master volume 0 and speech stopped, the previous volume
+restored on unlock), so the attract greeting never calls out from an out-of-service screen. `wipe` refuses while
 anything is unsent. Nothing else a command does is ever visible to a participant. In Electron the
 device token comes from provisioning (`SHRIII_DEVICE_TOKEN` / `deviceToken` in the config file) through
 the preload's `getInfo()`, never from the bundle; the web `/kiosk` route has no token and never polls.

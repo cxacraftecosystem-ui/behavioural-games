@@ -82,6 +82,9 @@ jobs:
       VITE_KIOSK_MODE: ${{ vars.KIOSK_MODE || 'public' }}
       VITE_SITE_MODE: ${{ vars.KIOSK_SITE_MODE || 'supervised' }}
       VITE_DEV_PIN: ${{ secrets.KIOSK_DEV_PIN }}
+      # Release-pack keys pinned into the build ({"key_id": "base64"}); remote commands signed with any
+      # other key are refused on the kiosk. Rotation: add the new key here, release, then rotate the server.
+      VITE_PINNED_RELEASE_KEYS: ${{ vars.RELEASE_PACK_PUBLIC_KEYS }}
       VITE_DEV_VOICE_PLACEHOLDER: "false"
       VITE_DEV_OVERLAY: "false"
     steps:
@@ -97,6 +100,7 @@ jobs:
           missing=()
           [ -n "$VITE_API_BASE" ] || missing+=("vars.KIOSK_API_BASE")
           [[ "$VITE_DEV_PIN" =~ ^[0-9]{4,8}$ ]] || missing+=("secrets.KIOSK_DEV_PIN (4-8 digits)")
+          [[ "$VITE_PINNED_RELEASE_KEYS" == *'"'* ]] || missing+=("vars.RELEASE_PACK_PUBLIC_KEYS")
           if [ ${#missing[@]} -gt 0 ]; then
             if [[ "$GITHUB_REF" == refs/tags/kiosk-v* ]]; then
               echo "::error title=Kiosk release configuration::missing ${missing[*]}"; exit 1
