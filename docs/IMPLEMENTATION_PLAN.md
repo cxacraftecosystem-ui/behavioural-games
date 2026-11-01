@@ -206,7 +206,7 @@ Exact patch versions are pinned in M0 (PLT-08).
 | Infra | ECS Fargate, RDS, S3, OpenTofu; pilot alternative: 2 VMs + Docker Compose | — | No Kubernetes |
 | Monorepo | pnpm + Turborepo; uv workspaces; renv; Node LTS | current majors | |
 | Testing | Vitest, Playwright (Electron), fast-check, pytest + hypothesis, testthat, Schemathesis | current | Golden sessions, simulated players |
-| CI/CD | GitHub Actions, Renovate (soak periods), cosign signing, CycloneDX SBOM, CodeQL, osv-scanner | — | Release tags record app × content × dictionary |
+| CI/CD | GitHub Actions, Dependabot (soak periods), cosign signing, CycloneDX SBOM, CodeQL, osv-scanner | — | Release tags record app × content × dictionary |
 
 ---
 
@@ -366,7 +366,7 @@ Every session records: `app_version`, `content_pack_version`/`bundle_hash`, `aud
 - AC: Release tags record the `app × content × dictionary × release-pack` tuple.
 
 #### PLT-04 · CI/CD pipeline — P0 · M0 · deps: PLT-01, PLT-02 · src: GOV-20
-GitHub Actions stages: lint and types → unit and property tests → schema profile and compat checks → plan-lint (PLT-08) → scoring golden tests → content completeness → **small** simulated-player recovery run (n = 50 sessions per arm, analysis on precomputed fixtures) per PR, with the **full** run nightly → CodeQL, osv-scanner and CycloneDX SBOM → cosign-signed snap → container images to ECR → OpenTofu plan and apply to staging → Playwright E2E → manual ring promotion. Renovate applies updates with soak periods.
+GitHub Actions stages: lint and types → unit and property tests → schema profile and compat checks → plan-lint (PLT-08) → scoring golden tests → content completeness → **small** simulated-player recovery run (n = 50 sessions per arm, analysis on precomputed fixtures) per PR, with the **full** run nightly → CodeQL, osv-scanner and CycloneDX SBOM → cosign-signed snap → container images to ECR → OpenTofu plan and apply to staging → Playwright E2E → manual ring promotion. Dependabot applies updates with soak periods.
 - AC: An incompatible schema PR fails unless it bumps the major version and includes migration notes.
 - AC: Builds are cosign-signed and include an SBOM. The same commit gives the same web-asset hashes.
 - AC: Staging rebuilds from IaC in under 30 minutes.
@@ -1663,7 +1663,7 @@ Lint, types, unit and property tests, profile and compat checks, plan lint, gold
 | Integrity unmeasurable individually (mode a) | Invalid scores | Dice group-only; individual integrity from Weighing dilemmas only; restricted | MG-06, SCR-08 |
 | Onlookers and coaching | Bias, privacy | Privacy film, headset, hide button, never-voice rule | KSK-05/12 |
 | Over-engineering for a small team | Ops burden | One OS, ODK, Metabase, Cognito, CloudWatch, git-based governance, deferred selector, SIEM and hash chain | §1.5 |
-| Version churn (Electron, TS 7, PG minors) | Instability | Major lines in the plan; pins verified in M0; TS 5/6 for builds; Renovate soak | PLT-08 |
+| Version churn (Electron, TS 7, PG minors) | Instability | Major lines in the plan; pins verified in M0; TS 5/6 for builds; Dependabot soak | PLT-08 |
 | No report in Stages 1–3 lowers play-again | Engagement metric biased | Interpret with this caveat; "what this game is about" message; targets set with this known | REP-02, CRT-11 |
 | Licences and translations late | Stage 2 delayed | Start in M0; tracker; prioritise block X instruments | CRT-02/03 |
 

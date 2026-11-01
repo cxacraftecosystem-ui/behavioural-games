@@ -1,0 +1,156 @@
+# Dependency updates (PLT-04). Dependabot is the only updater: GitHub runs it without an app install, and the
+# Renovate config it replaces was never picked up (no Renovate app on the organisation, no PR or dashboard).
+#
+# Every ecosystem runs weekly (Monday, before 09:00 IST). Minor and patch updates are grouped into one PR per
+# ecosystem and directory set; majors arrive one per PR. Soak: a release must be 7 days old before it is proposed
+# (`cooldown`), majors 30 days; security updates skip the cooldown. The scientific Python stack and the kiosk
+# runtime get their own groups so numerics and timing changes are reviewed on their own.
+#
+# Not covered, because Dependabot has no manager for them: R packages (stats/r-psychometrics/renv.lock, updated by
+# hand with renv) and base-image versions passed as Dockerfile ARGs (PYTHON_VERSION, NODE_VERSION, UV_VERSION,
+# NGINX_IMAGE), which follow the CI interpreter and are bumped manually.
+version: 2
+
+updates:
+  # pnpm workspace: frontend/apps/*, frontend/packages/*, contracts (one root lockfile).
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/tools/timing-calibration/web"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kolkata
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    labels: [dependencies]
+    open-pull-requests-limit: 8
+    groups:
+      kiosk-runtime:
+        applies-to: version-updates
+        patterns: [pixi.js, pixi-filters, gsap, xstate, electron, react, react-dom]
+        update-types: [minor, patch]
+      js-toolchain:
+        applies-to: version-updates
+        patterns: [typescript, vite, vitest, "@vitejs/plugin-react", "@biomejs/biome", turbo, "@turbo/*"]
+        update-types: [minor, patch]
+      npm-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # uv: the root workspace (backend/api, contracts/python, stats/*, tools/i18n, tools/loadtest, tools/replay) and
+  # the tools that keep their own lockfile.
+  - package-ecosystem: uv
+    directories:
+      - "/"
+      - "/tools/asr-bakeoff"
+      - "/tools/audio-pipeline"
+      - "/tools/provision"
+      - "/tools/timing-calibration"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kolkata
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    labels: [dependencies]
+    open-pull-requests-limit: 8
+    groups:
+      scientific-python:
+        applies-to: version-updates
+        patterns:
+          [numpy, scipy, pandas, polars, statsmodels, pingouin, semopy, factor_analyzer, scikit-learn, xgboost, pyarrow]
+        update-types: [minor, patch]
+      backend-stack:
+        applies-to: version-updates
+        patterns: [fastapi, uvicorn, pydantic, pydantic-settings, sqlalchemy, alembic, psycopg]
+        update-types: [minor, patch]
+      python-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kolkata
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    labels: [dependencies]
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: "/infra/docker"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kolkata
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    labels: [dependencies]
+    groups:
+      docker-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - "/infra/compose"
+      - "/infra/ec2"
+      - "/tools/loadtest"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kolkata
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    labels: [dependencies]
+    ignore:
+      # PostgreSQL major follows what the managed database offers (PLT-08); never bump it automatically.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+    groups:
+      compose-minor-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # OpenTofu root modules and shared modules (providers and their lockfiles).
+  - package-ecosystem: terraform
+    directories:
+      - "/infra/tofu/bootstrap"
+      - "/infra/tofu/envs/*"
+      - "/infra/tofu/modules/*"
+      - "/infra/tofu/platform"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kolkata
+    cooldown:
+      default-days: 14
+      semver-major-days: 30
+    labels: [dependencies]
+    groups:
+      opentofu-providers:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
