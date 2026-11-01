@@ -124,10 +124,10 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
   const rules = policy.data
     ? policy.data.rules.map((r) => ({
         id: r.id,
-        dataClass: r.data_class,
+        dataClass: r.data_class ?? 'unclassified',
         ttlDays: r.ttl_days ?? null,
         enabled: r.enabled,
-        description: r.description,
+        description: r.description ?? '',
       }))
     : retention.rules;
   const version = policy.data?.version ?? retention.version;
