@@ -16,4 +16,12 @@ export const adminKeys = {
   erasure: () => ['admin', 'erasure-requests'] as const,
   gates: () => ['admin', 'gates'] as const,
   releasePack: () => ['admin', 'release-pack'] as const,
+  kioskCommands: (kioskId: string) => ['admin', 'kiosks', kioskId, 'commands'] as const,
+  users: () => ['admin', 'users'] as const,
+  retentionPolicy: () => ['admin', 'retention', 'policy'] as const,
+  retentionRuns: () => ['admin', 'retention', 'runs'] as const,
+  legalHolds: () => ['admin', 'legal-holds'] as const,
+  contentLines: () => ['admin', 'content', 'lines'] as const,
+  audioTakes: (lineId: string, language: string) =>
+    ['admin', 'content', 'audio', lineId, language] as const,
 };

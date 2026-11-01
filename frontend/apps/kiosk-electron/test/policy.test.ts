@@ -16,6 +16,16 @@ import { RendererWatchdog } from '../src/main/watchdog.ts';
 describe('config', () => {
   const base = { file: null, env: {}, isPackaged: false, devKioskId: 'kiosk-dev-test' };
 
+  it('reads the provisioned device token and refuses anything else', () => {
+    expect(resolveConfig(base).deviceToken).toBeNull();
+    const token = 'kdt_abcdefghijklmnopqrstuvwxyz012345';
+    expect(resolveConfig({ ...base, env: { SHRIII_DEVICE_TOKEN: token } }).deviceToken).toBe(token);
+    expect(resolveConfig({ ...base, file: { deviceToken: token } }).deviceToken).toBe(token);
+    expect(() => resolveConfig({ ...base, env: { SHRIII_DEVICE_TOKEN: 'not a token' } })).toThrow(
+      ConfigError,
+    );
+  });
+
   it('uses safe development defaults', () => {
     const c = resolveConfig(base);
     expect(c.kioskId).toBe('kiosk-dev-test');

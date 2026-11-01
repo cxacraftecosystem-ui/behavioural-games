@@ -6,17 +6,24 @@ import {
   DownloadIcon,
   LockIcon,
   RotateCcwIcon,
+  SaveIcon,
   WandSparklesIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useId, useMemo, useState } from 'react';
 import { Section } from '@/components/data/page-header';
 import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { unwrap } from '@/lib/api/client';
+import { errorMessage } from '@/lib/api/errors';
+import { useApi } from '@/lib/auth/auth-context';
 import { canonicalJson, downloadText, parseJson, sha256Hex } from '../shared/canonical-json';
-import { Hash } from '../shared/components';
+import { Hash, useAdminMutation } from '../shared/components';
+import { adminKeys } from '../shared/query-keys';
 import { checkGameConfig, LOCKED_FIELDS, MEASUREMENT_FIELDS } from './config-checks';
 import { DiffList } from './diff-list';
 
@@ -24,20 +31,52 @@ function pretty(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+/** Next patch version (0.1.3 → 0.1.4); a draft is always a new version, never an edit in place. */
+export function nextDraftVersion(latest: string | null): string {
+  if (!latest) return '0.1.0';
+  const [major = 0, minor = 1, patch = 0] = latest
+    .split('.')
+    .map((p) => Number.parseInt(p, 10) || 0);
+  return `${major}.${minor}.${patch + 1}`;
+}
+
 /**
  * JSON editor for a draft game configuration with live schema, invariant and change-control checks.
- * There is no API to save a draft yet, so a valid result is downloaded for commit under
- * content/games (then Sync creates the draft version server-side).
+ * A valid edit is saved as a new draft version (`POST /api/v1/games/{game_id}/versions`; the server
+ * re-validates the contract and refuses locked-field changes), or downloaded to commit under
+ * content/games.
  */
 export function ConfigEditor({
   base,
   sourcePath,
   readOnly,
+  gameId,
+  latestVersion,
+  onSaved,
 }: {
   readonly base: Record<string, unknown>;
   readonly sourcePath: string | null;
   readonly readOnly: boolean;
+  /** Game and newest version, for saving a draft (no save control without them). */
+  readonly gameId?: string;
+  readonly latestVersion?: string | null;
+  readonly onSaved?: (version: string) => void;
 }) {
+  const api = useApi();
+  const versionId = useId();
+  const [draftVersion, setDraftVersion] = useState(() => nextDraftVersion(latestVersion ?? null));
+  useEffect(() => setDraftVersion(nextDraftVersion(latestVersion ?? null)), [latestVersion]);
+  const saveDraft = useAdminMutation({
+    mutationFn: (config: Record<string, unknown>) =>
+      unwrap(
+        api.POST('/api/v1/games/{game_id}/versions', {
+          params: { path: { game_id: gameId ?? '' } },
+          body: { version: draftVersion, config },
+        }),
+      ),
+    invalidate: gameId ? [adminKeys.gameVersions(gameId), adminKeys.games()] : [],
+    success: (v: { version: string }) => `Draft ${v.version} saved.`,
+  });
   const initial = useMemo(() => pretty(base), [base]);
   const [text, setText] = useState(initial);
   useEffect(() => setText(initial), [initial]);
@@ -112,12 +151,13 @@ export function ConfigEditor({
                 Reset
               </Button>
               <Button
+                variant="outline"
                 size="sm"
                 disabled={!dirty || !check?.valid}
                 onClick={() => parsed.ok && downloadText(fileName, pretty(parsed.value))}
               >
                 <DownloadIcon aria-hidden="true" />
-                Download {fileName}
+                Download
               </Button>
             </ActionGroup>
           )}
@@ -130,10 +170,44 @@ export function ConfigEditor({
           onChange={(e) => setText(e.target.value)}
           className="h-[34rem] resize-y font-mono text-xs leading-5"
         />
-        {!readOnly && (
-          <p className="text-xs text-muted-foreground">
-            To save, commit the downloaded file and run Sync.
-          </p>
+        {!readOnly && gameId && (
+          <form
+            className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3"
+            aria-label="Save draft"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!parsed.ok || !check?.valid || !dirty) return;
+              saveDraft.mutate(parsed.value as Record<string, unknown>, {
+                onSuccess: (v) => onSaved?.(v.version),
+              });
+            }}
+          >
+            <div className="grid gap-1.5">
+              <Label htmlFor={versionId}>New version</Label>
+              <Input
+                id={versionId}
+                className="w-32 font-mono"
+                value={draftVersion}
+                onChange={(e) => setDraftVersion(e.target.value.trim())}
+                pattern="\d+\.\d+\.\d+"
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!dirty || !check?.valid || saveDraft.isPending}
+              data-testid="save-draft"
+            >
+              <SaveIcon aria-hidden="true" />
+              {saveDraft.isPending ? 'Saving…' : 'Save draft'}
+            </Button>
+            {saveDraft.error ? (
+              <p className="w-full text-sm text-destructive" role="alert">
+                {errorMessage(saveDraft.error)}
+              </p>
+            ) : null}
+          </form>
         )}
       </div>
 

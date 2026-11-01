@@ -132,6 +132,9 @@ jobs:
           enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-packages
+      - name: Export the OpenAPI document (artifact; commit it as backend/api/openapi.json when it drifts)
+        continue-on-error: true
+        run: uv run shriii-api export-openapi --out openapi-generated.json
       - name: Ruff lint
         run: uv run ruff check --output-format=github .
       - name: Ruff format
@@ -152,6 +155,7 @@ jobs:
           name: python-reports
           path: |
             pytest-report.xml
+            openapi-generated.json
             sim-recovery/
           if-no-files-found: ignore
 

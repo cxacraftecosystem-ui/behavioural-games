@@ -44,6 +44,7 @@ import type { KioskOutbox } from '../logging/outbox/types.ts';
 import { recoverInterruptedSessions } from '../logging/recovery.ts';
 import { BatchUploader } from '../logging/uploader.ts';
 import { developmentDeviceConfig, type KioskDeviceConfig } from './device.ts';
+import { RemoteCommandClient } from './remote-commands.ts';
 import { SessionController } from './session-controller.ts';
 import { isOnboardingArt, StageScreens } from './stage-screens.ts';
 import { destroyStage, installTweenSafeDestroy } from './stage-teardown.ts';
@@ -107,6 +108,8 @@ export interface KioskRuntime {
   readonly audio: AudioService;
   readonly voice: VoiceService;
   readonly device: KioskDeviceConfig;
+  /** Remote commands (KSK-10): lock screen state and the signed-command poller. */
+  readonly remote: RemoteCommandClient;
   /** True when the stage screens own attract/onboarding/report/survey (no React fallbacks there). */
   readonly stageScreens: boolean;
   dispose(): void;
@@ -145,10 +148,34 @@ export function createHostLayout(host: HTMLElement, pxPerMm: number): Layout & {
   return layout;
 }
 
+const OUTBOX_DB_NAME = 'shriii-outbox';
+
+/**
+ * Remote `wipe`: delete the local outbox database and HTTP caches. The kiosk's identity (kiosk id and
+ * seed) and the remote-command store stay, so the wiped kiosk keeps its registration and can never
+ * re-run the command. Called only when nothing is unsent.
+ */
+async function wipeLocalData(outbox: KioskOutbox): Promise<void> {
+  if (outbox instanceof DexieOutbox) {
+    outbox.close();
+    if (typeof indexedDB !== 'undefined') {
+      await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.deleteDatabase(OUTBOX_DB_NAME);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error ?? new Error('outbox delete failed'));
+        req.onblocked = () => resolve();
+      });
+    }
+  }
+  if (typeof caches !== 'undefined') {
+    for (const key of await caches.keys()) await caches.delete(key);
+  }
+}
+
 async function openOutbox(kioskId: string): Promise<KioskOutbox> {
   if (typeof indexedDB === 'undefined') return new MemoryOutbox({ kioskId });
   try {
-    const outbox = new DexieOutbox({ kioskId });
+    const outbox = new DexieOutbox({ kioskId, dbName: OUTBOX_DB_NAME });
     await outbox.open();
     return outbox;
   } catch (err) {
@@ -235,6 +262,8 @@ export async function createKioskRuntime(
     apiBase: options.apiBase ?? null,
     ...(token ? { headers: () => ({ authorization: `Bearer ${token}` }) } : {}),
   });
+  // Counted for `pull_logs` (a number only: no messages, no ids).
+  let sessionErrors = 0;
   const playServices = {
     app,
     layout,
@@ -285,7 +314,10 @@ export async function createKioskRuntime(
       ? { offerContactOptIn: options.offerContactOptIn }
       : {}),
     clockFactory: () => new SessionClock({ profile: { ...runtimeClock.profile, refreshHz } }),
-    onError: (err) => console.error('[kiosk] session error', err),
+    onError: (err) => {
+      sessionErrors += 1;
+      console.error('[kiosk] session error', err);
+    },
   });
   // Wipe: the session ending also stops audio (no trace of the previous player).
   const unsub = controller.subscribe((v) => {
@@ -295,6 +327,30 @@ export async function createKioskRuntime(
     }
   });
   uploader.start();
+
+  // Polls only while nobody is at the kiosk: the uploader is paused for the length of every session
+  // (SessionController pauses it at session start and resumes it at the end) and the machine is in
+  // attract. The same signal that keeps uploads out of play keeps commands out of play.
+  const remote = new RemoteCommandClient({
+    apiBase: options.apiBase ?? null,
+    deviceToken: token,
+    kioskId: device.kioskId,
+    isIdle: () => !uploader.isPaused && controller.snapshot.state === 'attract',
+    effects: {
+      sync: async () => {
+        await uploader.uploadOnce();
+      },
+      reload: () => globalThis.location?.reload(),
+      outboxStats: () => outbox.stats(),
+      wipeLocal: () => wipeLocalData(outbox),
+      appVersion: device.versions.app_version,
+      errorCounts: () => ({
+        session_errors: sessionErrors,
+        upload_failures: uploader.current.consecutiveFailures,
+      }),
+    },
+  });
+  remote.start();
 
   const useStage = options.stageScreens !== false && isOnboardingArt(art);
   const stageScreens = useStage
@@ -324,8 +380,10 @@ export async function createKioskRuntime(
     audio,
     voice,
     device,
+    remote,
     stageScreens: useStage,
     dispose() {
+      remote.stop();
       stageScreens?.dispose();
       unsub();
       controller.dispose();

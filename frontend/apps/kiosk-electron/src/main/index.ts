@@ -366,6 +366,7 @@ function registerIpc(r: Runtime): void {
       platform: 'electron',
       appVersion: app.getVersion(),
       kioskId: r.cfg.kioskId,
+      deviceToken: r.cfg.deviceToken,
       updateChannel: r.updater?.ring ?? null,
       encryption: r.encryption,
       printer: r.printer?.description ?? 'none',
@@ -463,6 +464,10 @@ async function main(): Promise<void> {
       fetch: (input, init) => net.fetch(input as string, init),
       timeoutMs: cfg.uploadTimeoutMs,
       idlePollMs: cfg.uploadIdlePollMs,
+      headers: () =>
+        cfg.deviceToken
+          ? { authorization: `Bearer ${cfg.deviceToken}` }
+          : ({} as Record<string, string>),
       log: (msg, data) => log.info(msg, data),
     });
     r.uploader.start();

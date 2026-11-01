@@ -15,6 +15,7 @@ import { AuditStamp, TimeStamp } from '@/components/data/audit-stamp';
 import { Section } from '@/components/data/page-header';
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/states';
 import { StatusBadge } from '@/components/data/status-badge';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -307,6 +308,16 @@ export function PolicyPanel({
     invalidate: [adminKeys.settings(), adminKeys.auditAll()],
   });
   const [approveError, setApproveError] = useState<string | null>(null);
+  const sign = useAdminMutation({
+    mutationFn: (version: string) =>
+      unwrap(
+        api.POST('/api/v1/admin/policies/{policy_version}/sign', {
+          params: { path: { policy_version: version } },
+        }),
+      ),
+    invalidate: [adminKeys.settings(), adminKeys.auditAll()],
+    success: (r: { policy_version: string }) => `v${r.policy_version} signed.`,
+  });
 
   if (settings.isPending) return <LoadingState rows={6} label="Loading policy" />;
   if (settings.isError)
@@ -383,6 +394,20 @@ export function PolicyPanel({
                 ],
               ]}
             />
+            {current.status === 'approved' && !current.signature && (
+              <div className="border-t pt-3">
+                <ActionGroup align="start">
+                  <Button
+                    disabled={sign.isPending}
+                    onClick={() => sign.mutate(current.policy_version)}
+                    data-testid="policy-sign"
+                  >
+                    <FileSignatureIcon aria-hidden="true" />
+                    {sign.isPending ? 'Signing…' : `Sign v${current.policy_version}`}
+                  </Button>
+                </ActionGroup>
+              </div>
+            )}
             {current.status === 'proposed' && (
               <div className="flex flex-wrap items-center gap-3 border-t pt-3">
                 {current.proposed_by === me ? (

@@ -21,6 +21,7 @@ import { KeyValues } from '../shared/components';
 import { AudioSlot } from './audio-slot';
 import { statusById, transitionOptions } from './catalogue-model';
 import type { CatalogueLine, ContentSnapshot } from './content-types';
+import { SignoffButton } from './signoff';
 
 export function LineDetail({
   line,
@@ -197,13 +198,22 @@ export function LineDetail({
                                       A review comment is required.
                                     </p>
                                   )}
+                                  <div className="mt-2">
+                                    <SignoffButton
+                                      lineId={line.id}
+                                      language={lang}
+                                      toStatus={o.to.id}
+                                      toLabel={o.to.label}
+                                      signoffRole={o.signoffRole}
+                                      roles={snapshot.workflow.roles}
+                                      commentRequired={o.commentRequired}
+                                      disabled={o.missing.length > 0}
+                                    />
+                                  </div>
                                 </li>
                               ))}
                             </ul>
                           )}
-                          <p className="text-xs text-muted-foreground">
-                            Record sign-offs in the translation workbook.
-                          </p>
                         </div>
                       )}
 

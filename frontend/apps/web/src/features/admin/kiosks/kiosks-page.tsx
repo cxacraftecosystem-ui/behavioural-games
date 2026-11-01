@@ -47,6 +47,7 @@ import {
   RegisterKioskDialog,
   TokenOnceDialog,
 } from './kiosk-dialogs';
+import { RemoteCommands } from './remote-commands';
 
 type KioskToken = Schema<'KioskToken'>;
 type SystemEvent = {
@@ -551,6 +552,7 @@ export function AdminKiosksPage() {
                     ...dv.extras.map(([k, v]) => [k, v] as const),
                   ]}
                 />
+                <RemoteCommands kioskId={detail.kiosk_id} revoked={detail.status === 'revoked'} />
                 <Section title="Deployments">
                   <ul className="space-y-1 text-sm">
                     {(deployments.data ?? [])

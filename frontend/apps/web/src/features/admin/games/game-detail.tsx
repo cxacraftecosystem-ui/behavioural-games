@@ -193,7 +193,14 @@ export function GameDetail({ game }: { readonly game: Game }) {
           </TabsContent>
 
           <TabsContent value="editor" className="pt-2">
-            <ConfigEditor base={d.config} sourcePath={d.source_path} readOnly={isApproved} />
+            <ConfigEditor
+              base={d.config}
+              sourcePath={d.source_path}
+              readOnly={isApproved}
+              gameId={game.game_id}
+              latestVersion={list.at(-1)?.version ?? null}
+              onSaved={setSelected}
+            />
           </TabsContent>
 
           <TabsContent value="diff" className="pt-2">

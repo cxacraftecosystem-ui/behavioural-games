@@ -3,8 +3,8 @@
  * the browser). Reads the committed voice-line catalogue, recording-script translations, the ITC
  * workflow and the audio QC thresholds, validates them, and returns a plain serializable object.
  *
- * The API has no content-line endpoint yet (see missing-endpoints.ts); once it exists the content
- * page should read from it and this loader becomes a fallback for offline review.
+ * The scripts and workflow come from here; the live ITC status and console sign-offs come from
+ * `GET /api/v1/admin/content/lines` (merged in the page by `live-state.ts`).
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';

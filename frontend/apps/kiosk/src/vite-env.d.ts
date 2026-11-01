@@ -38,6 +38,8 @@ interface Window {
   readonly shriiiKiosk?: {
     readonly platform: 'electron';
     getAppVersion(): Promise<string>;
+    /** Kiosk identity from the Electron main process (device token from provisioning). */
+    getInfo?(): Promise<{ readonly kioskId: string; readonly deviceToken: string | null } | null>;
     relaunchToAttract(): void;
     onPowerEvent(listener: (event: 'suspend' | 'resume') => void): () => void;
   };

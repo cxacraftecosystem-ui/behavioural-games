@@ -6,7 +6,19 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from shriii_api.db.base import Base, CreatedAtMixin
@@ -141,6 +153,75 @@ class StaffUser(Base, CreatedAtMixin):
     """Set when the password was issued by an operator (CLI); cleared when the user changes it."""
     last_login_at: Mapped[datetime | None] = mapped_column()
     created_by: Mapped[str] = mapped_column(String(256))
+
+
+class KioskCommand(Base, CreatedAtMixin):
+    """Signed remote command for one kiosk (KSK-10): lock, unlock, restart, sync, pull scrubbed logs, wipe.
+
+    Idempotent per kiosk by ``idempotency_key``; the kiosk verifies the Ed25519 signature before acting.
+    """
+
+    __tablename__ = "kiosk_commands"
+    __table_args__ = (UniqueConstraint("kiosk_id", "idempotency_key"), {"schema": GOVERNANCE})
+
+    command_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    kiosk_id: Mapped[str] = mapped_column(ForeignKey(f"{GOVERNANCE}.kiosks.kiosk_id"), index=True)
+    command: Mapped[str] = mapped_column(String(16))
+    """lock | unlock | restart | sync | pull_logs | wipe"""
+    idempotency_key: Mapped[str] = mapped_column(String(64))
+    reason: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="queued")
+    """queued | delivered | acknowledged | failed | cancelled | expired"""
+    issued_by: Mapped[str] = mapped_column(String(256))
+    expires_at: Mapped[datetime] = mapped_column()
+    nonce: Mapped[str] = mapped_column(String(32))
+    signature: Mapped[str] = mapped_column(Text)
+    key_id: Mapped[str] = mapped_column(String(64))
+    delivered_at: Mapped[datetime | None] = mapped_column()
+    acknowledged_at: Mapped[datetime | None] = mapped_column()
+    result: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    error: Mapped[str | None] = mapped_column(Text)
+
+
+class AudioTake(Base, CreatedAtMixin):
+    """An uploaded recording take for one voice line and language (VOX-02), pending audio QC."""
+
+    __tablename__ = "audio_takes"
+    __table_args__ = (Index("ix_audio_takes_line_language", "line_id", "language"), {"schema": GOVERNANCE})
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    line_id: Mapped[str] = mapped_column(String(128))
+    language: Mapped[str] = mapped_column(String(16))
+    filename: Mapped[str] = mapped_column(String(256))
+    content_type: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
+    peak_dbfs: Mapped[float | None] = mapped_column(Float)
+    rms_dbfs: Mapped[float | None] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(16), default="pending_qc")
+    uploaded_by: Mapped[str] = mapped_column(String(256))
+    data: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
+
+
+class ContentLineTransition(Base, CreatedAtMixin):
+    """Append-only ITC sign-off for one voice line and language (VOX-07)."""
+
+    __tablename__ = "content_line_transitions"
+    __table_args__ = (
+        Index("ix_content_line_transitions_line_language", "line_id", "language"),
+        {"schema": GOVERNANCE},
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    line_id: Mapped[str] = mapped_column(String(128))
+    language: Mapped[str] = mapped_column(String(16))
+    from_status: Mapped[str] = mapped_column(String(64))
+    to_status: Mapped[str] = mapped_column(String(64))
+    role: Mapped[str] = mapped_column(String(64))
+    signer: Mapped[str] = mapped_column(String(256))
+    comment: Mapped[str] = mapped_column(Text, default="")
+    recorded_by: Mapped[str] = mapped_column(String(256))
 
 
 class Deployment(Base, CreatedAtMixin):

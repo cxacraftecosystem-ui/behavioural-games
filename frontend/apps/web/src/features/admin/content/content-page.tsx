@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangleIcon, FileWarningIcon, VolumeXIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable, dataColumnHelper } from '@/components/data/data-table';
@@ -15,13 +16,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { unwrap } from '@/lib/api/client';
+import { useApi } from '@/lib/auth/auth-context';
 import { formatDateTime } from '@/lib/format';
 import { Hash } from '../shared/components';
+import { adminKeys } from '../shared/query-keys';
 import { coverage, orderedStatuses, statusById } from './catalogue-model';
 import type { CatalogueLine, ContentSnapshot, TranslationEntry } from './content-types';
 import { ContentVersions } from './content-versions';
 import { CoveragePanel } from './coverage-panel';
 import { LineDetail } from './line-detail';
+import { type LiveLines, withLiveState } from './live-state';
 
 const ALL = '__all__';
 const HIDDEN_COLUMNS = ['speaker'] as const;
@@ -43,7 +48,15 @@ function translationTone(status: string | undefined): StatusTone {
 }
 
 /** `/admin/content`: narrative line catalogue, recording and ITC status, audio slots, content versions. */
-export function AdminContentPage({ snapshot }: { readonly snapshot: ContentSnapshot }) {
+export function AdminContentPage({ snapshot: base }: { readonly snapshot: ContentSnapshot }) {
+  const api = useApi();
+  // Live ITC state and take counts from the server, laid over the repository snapshot.
+  const live = useQuery({
+    queryKey: adminKeys.contentLines(),
+    queryFn: async () =>
+      (await unwrap(api.GET('/api/v1/admin/content/lines'))) as unknown as LiveLines,
+  });
+  const snapshot = useMemo(() => withLiveState(base, live.data), [base, live.data]);
   const cov = useMemo(() => coverage(snapshot), [snapshot]);
   const statuses = useMemo(() => statusById(snapshot.workflow), [snapshot]);
   const translated = snapshot.languages.filter((l) => l !== snapshot.referenceLanguage);

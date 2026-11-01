@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
@@ -22,16 +22,20 @@ from shriii_api.db.models.ops import (
     Deployment,
     Job,
     Kiosk,
+    KioskCommand,
     LegalHold,
+    RetentionRun,
     RuntimeSetting,
+    StaffUser,
     SystemEvent,
 )
 from shriii_api.db.models.participants import ErasureRequest
 from shriii_api.db.models.validation import BatteryGate, ReleasePackRecord, TraitGate
 from shriii_api.security import ed25519_public_key, new_opaque_token, token_digest, x25519_public_key
-from shriii_api.services import content_sync
+from shriii_api.services import content_sync, policy_signing
 from shriii_api.services import gates as gate_svc
 from shriii_api.services import ingestion as ingestion_svc
+from shriii_api.services import kiosk_commands as command_svc
 from shriii_api.services import retention as retention_svc
 from shriii_api.worker import queue
 
@@ -162,6 +166,213 @@ def heartbeat(
     kiosk.health_status = "healthy"
     set_audit(request, action="kiosks.heartbeat", resource_type="kiosk", resource_id=kiosk.kiosk_id)
     return KioskOut.model_validate(kiosk)
+
+
+# ---------------------------------------------------------------- kiosk remote commands (KSK-10)
+
+KioskCommandName = Literal["lock", "unlock", "restart", "sync", "pull_logs", "wipe"]
+
+
+class KioskCommandIn(BaseModel):
+    command: KioskCommandName
+    idempotency_key: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    reason: str | None = Field(default=None, max_length=1000)
+    confirm_kiosk_id: str | None = Field(default=None, description="Must repeat the kiosk id for a wipe")
+
+
+class KioskCommandOut(ApiModel):
+    command_id: uuid.UUID
+    kiosk_id: str
+    command: str
+    status: str
+    reason: str | None
+    issued_by: str
+    created_at: datetime
+    expires_at: datetime
+    delivered_at: datetime | None
+    acknowledged_at: datetime | None
+    result: dict[str, Any]
+    error: str | None
+
+
+class KioskCommandEnvelope(BaseModel):
+    command_id: uuid.UUID
+    kiosk_id: str
+    command: str
+    issued_at: str = Field(description="Exactly the signed string (YYYY-MM-DDTHH:MM:SSZ)")
+    expires_at: str = Field(description="Exactly the signed string (YYYY-MM-DDTHH:MM:SSZ)")
+    nonce: str
+    signature: str = Field(description="Base64 Ed25519 over the RFC 8785 JSON of the other envelope fields")
+    key_id: str
+
+
+class KioskCommandAck(BaseModel):
+    status: Literal["acknowledged", "failed"]
+    result: dict[str, Any] = Field(default_factory=dict, description="Scrubbed counters only, never participant data")
+    error: str | None = Field(default=None, max_length=2000)
+
+
+def _command(db: DbSession, kiosk_id: str, command_id: uuid.UUID) -> KioskCommand:
+    cmd = db.get(KioskCommand, command_id)
+    if cmd is None or cmd.kiosk_id != kiosk_id:
+        raise_error(404, "unknown_command", "command not found")
+    return cmd
+
+
+@router.post(
+    "/kiosks/{kiosk_id}/commands",
+    response_model=KioskCommandOut,
+    status_code=201,
+    summary="Queue a signed remote command for a kiosk (idempotent per key)",
+)
+def create_kiosk_command(
+    kiosk_id: str,
+    body: KioskCommandIn,
+    request: Request,
+    response: Response,
+    db: DbSession,
+    settings: SettingsDep,
+    principal: Annotated[Principal, Depends(require(Perm.ADMIN_KIOSKS))],
+) -> KioskCommandOut:
+    kiosk = db.get(Kiosk, kiosk_id)
+    if kiosk is None:
+        raise_error(404, "unknown_kiosk", "kiosk not found")
+    existing = command_svc.find_by_key(db, kiosk_id, body.idempotency_key)
+    if existing is not None:
+        response.status_code = status.HTTP_200_OK
+        set_audit(
+            request,
+            action="kiosks.command",
+            resource_type="kiosk_command",
+            resource_id=str(existing.command_id),
+            command=existing.command,
+            kiosk_id=kiosk_id,
+            replayed=True,
+        )
+        return KioskCommandOut.model_validate(existing)
+    if kiosk.status == "revoked":
+        raise_error(409, "kiosk_revoked", "kiosk is revoked")
+    if body.command == "wipe":
+        if not body.reason or len(body.reason.strip()) < 3:
+            raise_error(422, "confirm_required", "a wipe needs a reason")
+        if body.confirm_kiosk_id != kiosk_id:
+            raise_error(422, "confirm_required", "repeat the kiosk id to confirm a wipe")
+        study = command_svc.held_study(db, kiosk_id)
+        if study is not None:
+            raise_error(409, "legal_hold", f"a legal hold covers study {study}")
+    cmd = command_svc.issue(
+        db,
+        settings,
+        kiosk_id=kiosk_id,
+        command=body.command,
+        idempotency_key=body.idempotency_key,
+        reason=body.reason,
+        actor=principal.sub,
+    )
+    set_audit(
+        request,
+        action="kiosks.command",
+        resource_type="kiosk_command",
+        resource_id=str(cmd.command_id),
+        command=cmd.command,
+        kiosk_id=kiosk_id,
+    )
+    return KioskCommandOut.model_validate(cmd)
+
+
+@router.get("/kiosks/{kiosk_id}/commands", response_model=list[KioskCommandOut], summary="Remote commands of a kiosk")
+def list_kiosk_commands(
+    kiosk_id: str, db: DbSession, principal: Annotated[Principal, Depends(require(Perm.ADMIN_KIOSKS))]
+) -> list[KioskCommandOut]:
+    if db.get(Kiosk, kiosk_id) is None:
+        raise_error(404, "unknown_kiosk", "kiosk not found")
+    command_svc.expire_stale(db, kiosk_id)
+    rows = db.execute(
+        select(KioskCommand)
+        .where(KioskCommand.kiosk_id == kiosk_id)
+        .order_by(KioskCommand.created_at.desc(), KioskCommand.command_id)
+        .limit(50)
+    ).scalars()
+    return [KioskCommandOut.model_validate(c) for c in rows]
+
+
+@router.post(
+    "/kiosks/{kiosk_id}/commands/{command_id}/cancel",
+    response_model=KioskCommandOut,
+    summary="Cancel a command the kiosk has not acted on",
+)
+def cancel_kiosk_command(
+    kiosk_id: str,
+    command_id: uuid.UUID,
+    request: Request,
+    db: DbSession,
+    principal: Annotated[Principal, Depends(require(Perm.ADMIN_KIOSKS))],
+) -> KioskCommandOut:
+    cmd = _command(db, kiosk_id, command_id)
+    command_svc.expire_stale(db, kiosk_id)
+    if cmd.status not in command_svc.OPEN_STATUSES:
+        raise_error(409, "command_not_cancellable", f"command is {cmd.status}")
+    cmd.status = "cancelled"
+    set_audit(request, action="kiosks.command.cancel", resource_type="kiosk_command", resource_id=str(command_id))
+    return KioskCommandOut.model_validate(cmd)
+
+
+def _device_kiosk(principal: Principal) -> str:
+    if principal.kiosk_id is None:
+        raise_error(403, "device_only", "commands are fetched by kiosk devices")
+    return principal.kiosk_id
+
+
+@router.get(
+    "/kiosk-device/commands",
+    response_model=list[KioskCommandEnvelope],
+    summary="Signed commands waiting for this kiosk (device token)",
+)
+def device_commands(
+    request: Request, db: DbSession, principal: Annotated[Principal, Depends(require(Perm.KIOSK_HEARTBEAT))]
+) -> list[KioskCommandEnvelope]:
+    kiosk_id = _device_kiosk(principal)
+    rows = command_svc.pending_for_device(db, kiosk_id)
+    set_audit(request, action="kiosks.command.deliver", resource_type="kiosk", resource_id=kiosk_id, count=len(rows))
+    return [
+        KioskCommandEnvelope(
+            command_id=c.command_id,
+            kiosk_id=c.kiosk_id,
+            command=c.command,
+            issued_at=command_svc.signed_payload(c)["issued_at"],
+            expires_at=command_svc.signed_payload(c)["expires_at"],
+            nonce=c.nonce,
+            signature=c.signature,
+            key_id=c.key_id,
+        )
+        for c in rows
+    ]
+
+
+@router.post(
+    "/kiosk-device/commands/{command_id}/ack",
+    response_model=KioskCommandOut,
+    summary="Report the outcome of a command (device token; idempotent)",
+)
+def ack_device_command(
+    command_id: uuid.UUID,
+    body: KioskCommandAck,
+    request: Request,
+    db: DbSession,
+    principal: Annotated[Principal, Depends(require(Perm.KIOSK_HEARTBEAT))],
+) -> KioskCommandOut:
+    kiosk_id = _device_kiosk(principal)
+    cmd = _command(db, kiosk_id, command_id)
+    changed = command_svc.acknowledge(cmd, status=body.status, result=body.result, error=body.error)
+    set_audit(
+        request,
+        action="kiosks.command.ack",
+        resource_type="kiosk_command",
+        resource_id=str(command_id),
+        status=body.status if changed else cmd.status,
+        replayed=not changed,
+    )
+    return KioskCommandOut.model_validate(cmd)
 
 
 # ---------------------------------------------------------------- deployments and content
@@ -525,6 +736,117 @@ def put_setting(
     return SettingOut.model_validate(row)
 
 
+# ---------------------------------------------------------------- users and grants (PRV-08)
+
+StaffRole = Literal["admin", "researcher", "administrator", "analyst"]
+
+
+class UserOut(ApiModel):
+    username: str
+    roles: list[str]
+    studies: list[str]
+    disabled: bool
+    locked_until: datetime | None
+    last_login_at: datetime | None
+    must_change_password: bool
+    created_at: datetime
+    created_by: str
+
+
+class UserGrantsIn(BaseModel):
+    roles: list[StaffRole] = Field(min_length=1)
+    studies: list[str] = Field(default_factory=lambda: ["*"], description='Study ids; ["*"] = every study')
+    disabled: bool | None = None
+
+
+@router.get("/users", response_model=list[UserOut], summary="Staff accounts with roles and study scopes")
+def list_users(db: DbSession, principal: Annotated[Principal, Depends(require(Perm.ADMIN_SETTINGS))]) -> list[UserOut]:
+    return [UserOut.model_validate(u) for u in db.execute(select(StaffUser).order_by(StaffUser.username)).scalars()]
+
+
+@router.put(
+    "/users/{sub}/grants",
+    response_model=UserOut,
+    summary="Set a staff account's roles and study scope (applies at its next sign-in)",
+)
+def put_user_grants(
+    sub: str,
+    body: UserGrantsIn,
+    request: Request,
+    db: DbSession,
+    principal: Annotated[Principal, Depends(require(Perm.ADMIN_SETTINGS))],
+) -> UserOut:
+    user = db.get(StaffUser, sub.strip().lower())
+    if user is None:
+        raise_error(404, "unknown_user", "staff account not found")
+    roles = sorted(set(body.roles))
+    studies = sorted({s.strip() for s in body.studies if s.strip()}) or ["*"]
+    if user.username == principal.sub.strip().lower() and ("admin" not in roles or body.disabled is True):
+        raise_error(409, "self_lockout", "you cannot remove your own admin role or disable yourself")
+    previous = {"roles": list(user.roles), "studies": list(user.studies), "disabled": user.disabled}
+    user.roles, user.studies = roles, studies
+    if body.disabled is not None:
+        user.disabled = body.disabled
+    db.flush()
+    set_audit(
+        request,
+        action="users.grants",
+        resource_type="staff_user",
+        resource_id=user.username,
+        previous=previous,
+        new={"roles": roles, "studies": studies, "disabled": user.disabled},
+    )
+    return UserOut.model_validate(user)
+
+
+# ---------------------------------------------------------------- deployment policy signing (PRV-01)
+
+
+class PolicySignatureOut(BaseModel):
+    policy_version: str
+    sha256: str
+    signature: str
+    key_id: str
+    algorithm: str
+    signed_by: str
+    signed_at: datetime
+
+
+@router.post(
+    "/policies/{policy_version}/sign",
+    response_model=PolicySignatureOut,
+    summary="Sign the approved deployment policy (two-person approval and PRV-01 combinations re-checked)",
+)
+def sign_policy(
+    policy_version: str,
+    request: Request,
+    db: DbSession,
+    settings: SettingsDep,
+    principal: Annotated[Principal, Depends(require(Perm.ADMIN_SETTINGS))],
+) -> PolicySignatureOut:
+    try:
+        signed = policy_signing.sign_policy(db, settings, policy_version, principal.sub)
+    except policy_signing.PolicySignError as exc:
+        raise_error(exc.status, exc.code, exc.message)
+    set_audit(
+        request,
+        action="policies.sign",
+        resource_type="policy",
+        resource_id=policy_version,
+        sha256=signed.sha256,
+        key_id=signed.key_id,
+    )
+    return PolicySignatureOut(
+        policy_version=signed.policy_version,
+        sha256=signed.sha256,
+        signature=signed.signature,
+        key_id=signed.key_id,
+        algorithm=signed.algorithm,
+        signed_by=signed.signed_by,
+        signed_at=signed.signed_at,
+    )
+
+
 @router.get("/audit", response_model=Page[AuditOut], summary="Audit log")
 def audit_log(
     db: DbSession,
@@ -720,6 +1042,41 @@ class LegalHoldIn(BaseModel):
     reason: str = Field(min_length=3)
 
 
+class LegalHoldOut(ApiModel):
+    id: int
+    scope_kind: str
+    scope_value: str
+    reason: str
+    created_by: str
+    created_at: datetime
+    released_at: datetime | None
+
+
+class RetentionRuleOut(BaseModel):
+    id: str
+    data_class: str | None
+    description: str | None
+    ttl_days: int | None
+    enabled: bool
+
+
+class RetentionPolicyOut(BaseModel):
+    version: str
+    sha256: str
+    rules: list[RetentionRuleOut]
+
+
+class RetentionRunOut(ApiModel):
+    id: uuid.UUID
+    started_at: datetime
+    finished_at: datetime | None
+    dry_run: bool
+    policy_sha256: str
+    report: dict[str, Any]
+    status: str
+    triggered_by: str
+
+
 @router.get("/dead-letters", response_model=Page[DeadLetterOut], summary="Dead-letter queue (grouped by reason)")
 def dead_letters(
     db: DbSession,
@@ -802,18 +1159,59 @@ def run_retention(
     }
 
 
-@router.post("/legal-holds", status_code=201, summary="Place a legal hold (blocks purge and erasure)")
+@router.get("/retention/policy", response_model=RetentionPolicyOut, summary="The retention rules the server applies")
+def retention_policy(principal: Annotated[Principal, Depends(require(Perm.RETENTION_RUN))]) -> RetentionPolicyOut:
+    policy, digest = retention_svc.load_policy()
+    rules = [
+        RetentionRuleOut(
+            id=str(r["id"]),
+            data_class=r.get("data_class"),
+            description=r.get("description"),
+            ttl_days=int(r["ttl_days"]) if r.get("ttl_days") is not None else None,
+            enabled=bool(r.get("enabled", True)),
+        )
+        for r in policy.get("rules", [])
+    ]
+    return RetentionPolicyOut(version=str(policy.get("version", "")), sha256=digest, rules=rules)
+
+
+@router.get("/retention/runs", response_model=list[RetentionRunOut], summary="Retention runs, newest first")
+def retention_runs(
+    db: DbSession, principal: Annotated[Principal, Depends(require(Perm.RETENTION_RUN))], limit: Limit = 50
+) -> list[RetentionRunOut]:
+    rows = db.execute(select(RetentionRun).order_by(RetentionRun.started_at.desc()).limit(limit)).scalars()
+    return [RetentionRunOut.model_validate(r) for r in rows]
+
+
+@router.get("/legal-holds", response_model=list[LegalHoldOut], summary="Legal holds (active first)")
+def list_holds(
+    db: DbSession, principal: Annotated[Principal, Depends(require(Perm.RETENTION_RUN))], active_only: bool = False
+) -> list[LegalHoldOut]:
+    stmt = select(LegalHold)
+    if active_only:
+        stmt = stmt.where(LegalHold.released_at.is_(None))
+    rows = db.execute(stmt.order_by(LegalHold.released_at.is_not(None), LegalHold.id.desc())).scalars()
+    return [LegalHoldOut.model_validate(h) for h in rows]
+
+
+@router.post(
+    "/legal-holds",
+    response_model=LegalHoldOut,
+    status_code=201,
+    summary="Place a legal hold (blocks purge, erasure and kiosk wipes)",
+)
 def create_hold(
     body: LegalHoldIn,
     request: Request,
     db: DbSession,
     principal: Annotated[Principal, Depends(require(Perm.RETENTION_RUN))],
-) -> dict[str, Any]:
+) -> LegalHoldOut:
     row = LegalHold(created_by=principal.sub, **body.model_dump())
     db.add(row)
     db.flush()
-    set_audit(request, action="legal_holds.create", resource_id=str(row.id))
-    return {"id": row.id, **body.model_dump()}
+    db.refresh(row)
+    set_audit(request, action="legal_holds.create", resource_type="legal_hold", resource_id=str(row.id))
+    return LegalHoldOut.model_validate(row)
 
 
 @router.post("/legal-holds/{hold_id}/release", summary="Release a legal hold")

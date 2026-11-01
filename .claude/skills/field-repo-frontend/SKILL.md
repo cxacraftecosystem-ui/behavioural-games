@@ -22,7 +22,7 @@ writes the kiosk rules out instead of forcing data-screen rules onto games.
 | Research + admin console | `frontend/apps/web` (`/research/*`, `/admin/*`, `/login`, `/`) | Next.js 16 App Router, React 19, Tailwind 4, shadcn/ui on `radix-ui`, TanStack Query/Table, ECharts 6 | researchers, analysts, field administrators, system admins | everything (§1–§19) |
 | Kiosk in the browser | `frontend/apps/web/src/app/kiosk/*` | mounts `@shriii/kiosk-game` client-side, no console providers | village participants | §20 + universal rules |
 | Kiosk shell | `frontend/apps/kiosk` | Vite + React, the renderer Electron loads | participants | §20 + universal rules |
-| Kiosk runtime | `frontend/apps/kiosk-electron` | hardened Electron main (kiosk window, `app://`, CSP, watchdog) | — (no UI of its own) | §20.9 |
+| Kiosk runtime | `frontend/apps/kiosk-electron` | hardened Electron main (kiosk window, `app://`, CSP, watchdog) | — (no UI of its own) | §20.10 |
 | Game library | `frontend/packages/kiosk-game` | Pixi 8 stage + GSAP, XState session, React fallback screens | participants | §20 |
 | Card-sort tablet | `frontend/apps/card-sort-app` | Capacitor + Vite + React, plain CSS | trained administrators (staff screens), participants (test stage) | staff screens: universal rules (§21); test stage: §20 |
 
@@ -678,11 +678,15 @@ actions. A detail screen is `PageHeader` (record title) + `Tabs` (`?tab=` in the
   API refuses them anyway.
 - **The kiosk never shows numbers;** the console never shows a participant's identity (pseudonymous ids
   only; identity lives in a separate vault).
-- **No gap admissions.** A capability the API does not offer yet is simply absent from the screen (or
-  replaced by the working alternative as a short line or a button — "To save, commit the downloaded file
-  and run Sync."). `features/admin/shared/missing-endpoints.ts` is the developer-facing backlog of those
-  endpoints; `shared.test.ts` fails when one appears in `openapi.json`, which is the cue to build the
-  screen for it. It is never rendered.
+- **No gap admissions — build the route instead** (owner ruling, 2026-11-01). When a screen needs an
+  endpoint that does not exist, the backend route, service, additive migration, audit and tests are
+  built in the same change and the control ships working. There is no "needs API" component and no
+  missing-endpoint registry any more; never reintroduce either.
+- **Every admin write is audited and permission-gated on the server** (`set_audit` in the route). The
+  console's own gating (`Can`, `usePermission`) only hides what the API would refuse anyway.
+- **Destructive admin actions confirm in a dialog** whose button repeats the verb ("Wipe"); the most
+  destructive (kiosk wipe) also needs a reason and the target id typed back. A legal hold refuses them
+  on the server, and the screen shows the server's refusal as is.
 
 ---
 
@@ -865,7 +869,7 @@ already says it. Calm and plain — a careful product designer, not a chatbot.
 | Approved versions are frozen and become loadable by kiosks (bundle check). Two different people must sign; both names are recorded in the audit log. | Freezes this version for kiosks. Needs two different people. |
 | Pseudonymous records only: pids, linkage, consent and enrolment. Identity and contact details are held in a separate vault and never shown in the research console. | Pseudonymous records only. Identity and contact details are never shown here. |
 | Stopping participation keeps already collected data under the consent; withdrawing with erasure removes it from every table and future snapshot, with a signed receipt. | Stopping keeps data collected so far. Erasure removes it everywhere, with a signed receipt. |
-| Needs API `POST /api/v1/admin/kiosks/{id}/commands` (KSK-10) … | *(removed — the control is absent until the endpoint exists)* |
+| Needs API `POST /api/v1/admin/kiosks/{id}/commands` (KSK-10) … | *(the route was built; the Lock / Sync / Wipe buttons work)* |
 | Your account still uses its initial password. Replace it with one only you know. | You’re still on your initial password. + link **Change password** |
 | This is a read-only demo with no backend connected, so changes are disabled. | Read-only demo — changes are off. |
 
@@ -975,14 +979,26 @@ scripts find targets by `data-target` ids — keep both.
 - No context menu (`contextmenu` blocked), no pinch zoom (`user-scalable=no`, `maximumScale: 1`), no
   text selection, `touch-action: none`, full screen on the first touch in a browser.
 
-### 20.8 Fallback screens (`session/ui/FallbackScreens.tsx`)
+### 20.8 Remote commands and the lock screen (KSK-10)
+
+`session/remote-commands.ts` polls `GET /api/v1/admin/kiosk-device/commands` with the device token,
+once at start and every 60 s, **only while the kiosk is idle in attract** (the uploader's pause signal).
+Each envelope is Ed25519-signed by the server for this kiosk; the client verifies the signature, the
+kiosk id, the expiry and that the nonce is new (executed ids and nonces persist across restarts), runs
+the command, then acks it. `lock` shows `RemoteLockScreen` — a static, text-free padlock with an
+accessible name that swallows every touch — until `unlock`, and survives a reboot. `wipe` refuses while
+anything is unsent. Nothing else a command does is ever visible to a participant. In Electron the
+device token comes from provisioning (`SHRIII_DEVICE_TOKEN` / `deviceToken` in the config file) through
+the preload's `getInfo()`, never from the bundle; the web `/kiosk` route has no token and never polls.
+
+### 20.9 Fallback screens (`session/ui/FallbackScreens.tsx`)
 
 Plain, icon-only screens for states whose real screen has not been plugged in through
 `KioskRuntimeView`'s `screens` prop. They use the art kit's tokens (`COLORS` from `KIOSK_PALETTE` /
 `MELA`), the same shapes, ≥ 20 mm targets, and the rules above; `FALLBACK_CSS` carries the pulse,
 ring, focus-visible outline (6px cream) and the reduced-motion swap. They are not a second design.
 
-### 20.9 Electron and the browser kiosk
+### 20.10 Electron and the browser kiosk
 
 - `apps/kiosk-electron` is a hardened main process (kiosk window, `app://` standard secure scheme,
   CSP, watchdog, encrypted outbox, thermal printer, signed update rings). It has **no UI of its own**:

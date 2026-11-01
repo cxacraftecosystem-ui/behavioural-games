@@ -150,6 +150,21 @@ test('kiosks: fleet health, kiosk detail and one-time token', async ({ page }) =
   await page.getByRole('cell', { name: /^pune-market-01 Hadapsar/ }).click();
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByText('Last heartbeat')).toBeVisible();
+  await expect(sheet.getByText('Remote commands')).toBeVisible();
+  // A remote command is confirmed, then queued once (the idempotency key is per confirmed intent).
+  await sheet.getByTestId('kiosk-command-lock').click();
+  const confirmLock = page.getByRole('dialog', { name: /Lock pune-market-01/ });
+  await confirmLock.getByTestId('kiosk-command-confirm').click();
+  await expect(confirmLock).toBeHidden();
+  await expect(sheet.getByTestId('kiosk-command-history')).toContainText('Lock');
+  // Wipe needs a reason and the kiosk id typed back.
+  await sheet.getByTestId('kiosk-command-wipe').click();
+  const confirmWipe = page.getByRole('dialog', { name: /Wipe pune-market-01/ });
+  await expect(confirmWipe.getByTestId('kiosk-command-confirm')).toBeDisabled();
+  await confirmWipe.getByLabel('Reason').fill('Decommissioned at the end of the pilot');
+  await confirmWipe.getByLabel('Type the kiosk id to confirm').fill('pune-market-01');
+  await expect(confirmWipe.getByTestId('kiosk-command-confirm')).toBeEnabled();
+  await confirmWipe.getByRole('button', { name: 'Cancel' }).click();
   await shot(page, '08-kiosks-detail', false);
   await page.keyboard.press('Escape');
 
@@ -204,11 +219,23 @@ test('settings: policy proposal, roles matrix, retention dry run and audit log',
 
   await page.getByRole('tab', { name: 'Users and roles' }).click();
   await expect(page.getByText('Permission matrix')).toBeVisible();
+  // Users and grants: edit a staff account's roles and study scope.
+  const users = page.getByTestId('users-table');
+  await expect(users).toContainText('r.menon');
+  await page.getByRole('button', { name: 'Edit access for r.menon' }).click();
+  const grants = page.getByRole('dialog', { name: /Access for r.menon/ });
+  await grants.getByLabel('Study scope').fill('S-PILOT, S-RETEST');
+  await grants.getByRole('button', { name: 'Save access' }).click();
+  await expect(grants).toBeHidden();
+  await expect(users).toContainText('S-RETEST');
   await shot(page, '11-settings-roles');
 
   await page.getByRole('tab', { name: 'Retention' }).click();
   await page.getByRole('button', { name: 'Dry run' }).click();
   await expect(page.getByRole('columnheader', { name: 'Would affect' })).toBeVisible();
+  // The server's run history and the active legal holds, each releasable in place.
+  await expect(page.getByTestId('retention-runs')).toContainText('Live');
+  await expect(page.getByTestId('legal-holds')).toContainText('S-PILOT');
   await shot(page, '12-settings-retention');
 
   await page.getByRole('tab', { name: 'Audit log' }).click();

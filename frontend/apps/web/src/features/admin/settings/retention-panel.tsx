@@ -66,7 +66,7 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
       (await unwrap(
         api.POST('/api/v1/admin/retention/run', { body: { dry_run: dryRun } }),
       )) as unknown as RunReport,
-    invalidate: [adminKeys.auditAll()],
+    invalidate: [adminKeys.auditAll(), adminKeys.retentionRuns()],
     success: (r: RunReport) =>
       r.dry_run ? 'Dry run finished: nothing was deleted' : 'Retention run finished',
   });
@@ -85,11 +85,10 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
     scope_value: '',
     reason: '',
   });
-  const [releaseId, setReleaseId] = useState('');
   const placeHold = useAdminMutation({
     mutationFn: (body: Schema<'LegalHoldIn'>) =>
       unwrap(api.POST('/api/v1/admin/legal-holds', { body })),
-    invalidate: [adminKeys.auditAll()],
+    invalidate: [adminKeys.auditAll(), adminKeys.legalHolds()],
     success: (r: Record<string, unknown>) => `Legal hold #${String(r.id)} placed`,
   });
   const releaseHold = useAdminMutation({
@@ -99,10 +98,40 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
           params: { path: { hold_id: id } },
         }),
       ),
-    invalidate: [adminKeys.auditAll()],
+    invalidate: [adminKeys.auditAll(), adminKeys.legalHolds()],
     success: (r: Record<string, unknown>) => `Legal hold #${String(r.id)} released`,
   });
 
+  const canRetention = usePermission({ all: ['retention.run'] });
+  const policy = useQuery({
+    queryKey: adminKeys.retentionPolicy(),
+    enabled: canRetention,
+    queryFn: () => unwrap(api.GET('/api/v1/admin/retention/policy')),
+  });
+  const runs = useQuery({
+    queryKey: adminKeys.retentionRuns(),
+    enabled: canRetention,
+    queryFn: () =>
+      unwrap(api.GET('/api/v1/admin/retention/runs', { params: { query: { limit: 20 } } })),
+  });
+  const holds = useQuery({
+    queryKey: adminKeys.legalHolds(),
+    enabled: canRetention,
+    queryFn: () => unwrap(api.GET('/api/v1/admin/legal-holds')),
+  });
+
+  // The rules the server runs; the repository copy read at build time until the server answers.
+  const rules = policy.data
+    ? policy.data.rules.map((r) => ({
+        id: r.id,
+        dataClass: r.data_class,
+        ttlDays: r.ttl_days ?? null,
+        enabled: r.enabled,
+        description: r.description,
+      }))
+    : retention.rules;
+  const version = policy.data?.version ?? retention.version;
+  const sha256 = policy.data?.sha256 ?? retention.sha256;
   const lastRules = report?.report.rules ?? {};
 
   return (
@@ -111,8 +140,7 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
         title="Retention schedule"
         description={
           <>
-            Applied nightly · v{retention.version} · sha256 <Hash value={retention.sha256} />. Legal
-            holds block purges.
+            Applied nightly · v{version} · sha256 <Hash value={sha256} />. Legal holds block purges.
           </>
         }
         actions={
@@ -158,7 +186,7 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
               </TableRow>
             </TableHeader>
             <TableBody>
-              {retention.rules.map((r) => {
+              {rules.map((r) => {
                 const res = lastRules[r.id];
                 return (
                   <TableRow key={r.id}>
@@ -199,9 +227,44 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
             Run <code className="font-mono">{report.retention_run_id}</code> (
             {report.dry_run ? 'dry run' : 'live'}) against policy{' '}
             {report.report.policy_version ?? '—'} · sha256 <Hash value={report.policy_sha256} />
-            {report.policy_sha256 !== retention.sha256 &&
-              ' · the server’s rules differ from the ones shown'}
           </p>
+        )}
+        {canRetention && (runs.data?.length ?? 0) > 0 && (
+          <div className="overflow-x-auto rounded-md border" data-testid="retention-runs">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Started</TableHead>
+                  <TableHead>Kind</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>By</TableHead>
+                  <TableHead className="text-right">Affected</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(runs.data ?? []).map((r) => {
+                  const counts = Object.values(
+                    (r.report as RunReport['report']).rules ?? {},
+                  ).reduce((n, x) => n + (x.affected ?? 0), 0);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <TimeStamp value={r.started_at} />
+                      </TableCell>
+                      <TableCell>{r.dry_run ? 'Dry run' : 'Live'}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={r.status} />
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{r.triggered_by}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatInteger(counts)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Section>
 
@@ -277,38 +340,39 @@ export function RetentionPanel({ retention }: { readonly retention: SettingsInpu
                 Place hold
               </Button>
             </form>
-            <form
-              className="space-y-3 rounded-lg border bg-card p-4"
-              aria-label="Release legal hold"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const id = Number.parseInt(releaseId, 10);
-                if (Number.isInteger(id) && id > 0)
-                  releaseHold.mutate(id, { onSuccess: () => setReleaseId('') });
-              }}
-            >
+            <div className="space-y-3 rounded-lg border bg-card p-4" data-testid="legal-holds">
               <p className="flex items-center gap-1.5 text-sm font-medium">
                 <ShieldOffIcon className="size-4" aria-hidden="true" />
-                Release a hold
+                Active holds
               </p>
-              <div className="space-y-1">
-                <Label htmlFor={`${holdId}-release`}>Hold number</Label>
-                <Input
-                  id={`${holdId}-release`}
-                  inputMode="numeric"
-                  value={releaseId}
-                  onChange={(e) => setReleaseId(e.target.value.replace(/\D/g, ''))}
-                />
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                variant="outline"
-                disabled={releaseHold.isPending || !releaseId}
-              >
-                Release hold
-              </Button>
-            </form>
+              {(holds.data ?? []).filter((h) => !h.released_at).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No active holds.</p>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {(holds.data ?? [])
+                    .filter((h) => !h.released_at)
+                    .map((h) => (
+                      <li key={h.id} className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">#{h.id}</span>
+                        <span>
+                          {h.scope_kind} <code className="font-mono text-xs">{h.scope_value}</code>
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                          {h.reason}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={releaseHold.isPending}
+                          onClick={() => releaseHold.mutate(h.id)}
+                        >
+                          Release
+                        </Button>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
           </div>
         </Can>
       </Section>

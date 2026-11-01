@@ -25,6 +25,7 @@ import {
   ROLE_PERMISSIONS,
   SENSITIVE,
 } from './rbac-matrix';
+import { UsersPanel } from './users-panel';
 
 const ROLE_HEAD: Record<MatrixRole, string> = {
   admin: 'Admin',
@@ -47,9 +48,6 @@ export function RolesPanel() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Signed in as</CardTitle>
-            <CardDescription>
-              Roles and study scope are assigned in your sign-in provider.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <KeyValues
@@ -95,6 +93,8 @@ export function RolesPanel() {
           </CardContent>
         </Card>
       </div>
+
+      <UsersPanel />
 
       <Section
         title="Permission matrix"
