@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangleIcon, FileWarningIcon, VolumeXIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable, dataColumnHelper } from '@/components/data/data-table';
@@ -15,13 +16,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { unwrap } from '@/lib/api/client';
+import { useApi } from '@/lib/auth/auth-context';
 import { formatDateTime } from '@/lib/format';
-import { Hash, NeedsApi } from '../shared/components';
+import { Hash } from '../shared/components';
+import { adminKeys } from '../shared/query-keys';
 import { coverage, orderedStatuses, statusById } from './catalogue-model';
 import type { CatalogueLine, ContentSnapshot, TranslationEntry } from './content-types';
 import { ContentVersions } from './content-versions';
 import { CoveragePanel } from './coverage-panel';
 import { LineDetail } from './line-detail';
+import { type LiveLines, withLiveState } from './live-state';
 
 const ALL = '__all__';
 const HIDDEN_COLUMNS = ['speaker'] as const;
@@ -43,7 +48,15 @@ function translationTone(status: string | undefined): StatusTone {
 }
 
 /** `/admin/content`: narrative line catalogue, recording and ITC status, audio slots, content versions. */
-export function AdminContentPage({ snapshot }: { readonly snapshot: ContentSnapshot }) {
+export function AdminContentPage({ snapshot: base }: { readonly snapshot: ContentSnapshot }) {
+  const api = useApi();
+  // Live ITC state and take counts from the server, laid over the repository snapshot.
+  const live = useQuery({
+    queryKey: adminKeys.contentLines(),
+    queryFn: async () =>
+      (await unwrap(api.GET('/api/v1/admin/content/lines'))) as unknown as LiveLines,
+  });
+  const snapshot = useMemo(() => withLiveState(base, live.data), [base, live.data]);
   const cov = useMemo(() => coverage(snapshot), [snapshot]);
   const statuses = useMemo(() => statusById(snapshot.workflow), [snapshot]);
   const translated = snapshot.languages.filter((l) => l !== snapshot.referenceLanguage);
@@ -158,11 +171,11 @@ export function AdminContentPage({ snapshot }: { readonly snapshot: ContentSnaps
     <div className="space-y-8">
       <PageHeader
         title="Content"
-        description="Narrative voice lines, per-language recording and ITC adaptation status, audio QC and content-version approval. Every player-facing line is a pre-recorded clip; reference text is never synthesised in production."
+        description="Voice lines, translations, recordings and content approval."
         meta={
           <p className="text-xs text-muted-foreground">
-            Catalogue v{snapshot.catalogueVersion} · {snapshot.lines.length} lines · read from the
-            repository at build ({formatDateTime(snapshot.builtAt)}) ·{' '}
+            Catalogue v{snapshot.catalogueVersion} · {snapshot.lines.length} lines · built{' '}
+            {formatDateTime(snapshot.builtAt)} ·{' '}
             {snapshot.sources.map((s, i) => (
               <span key={s.path}>
                 {i > 0 && ', '}
@@ -177,7 +190,7 @@ export function AdminContentPage({ snapshot }: { readonly snapshot: ContentSnaps
       {snapshot.problems.length > 0 && (
         <Alert variant="warning">
           <AlertTriangleIcon aria-hidden="true" />
-          <AlertTitle>{snapshot.problems.length} content problem(s) found while loading</AlertTitle>
+          <AlertTitle>{snapshot.problems.length} content problem(s)</AlertTitle>
           <AlertDescription>
             <ul className="list-disc pl-4">
               {snapshot.problems.slice(0, 8).map((p) => (
@@ -190,16 +203,12 @@ export function AdminContentPage({ snapshot }: { readonly snapshot: ContentSnaps
 
       <Section
         title="Coverage by language"
-        description="Translation workflow (machine draft → approved) and recording status. Production packs take only approved lines; pilot packs also take think-aloud-tested lines."
+        description="Production packs take approved lines only."
       >
         <CoveragePanel snapshot={snapshot} coverage={cov} />
-        <NeedsApi endpoint="contentLines" compact />
       </Section>
 
-      <Section
-        title="Line catalogue"
-        description="Select a line for its scripts, sign-off trail, next ITC steps and audio slot"
-      >
+      <Section title="Line catalogue" description="Select a line to open it.">
         <DataTable
           data={rows}
           columns={columns}

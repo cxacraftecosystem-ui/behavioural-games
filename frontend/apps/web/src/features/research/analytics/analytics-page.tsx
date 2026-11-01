@@ -90,7 +90,7 @@ export function AnalyticsPage({ science }: { readonly science: ScienceConfig }) 
     <div className="space-y-6">
       <PageHeader
         title="Analytics"
-        description="Exploratory views of one snapshot: how indicators are distributed, where the outliers are, how groups and game versions differ, and how scores move between occasions. Exploratory only; nothing here is a confirmatory test."
+        description="Distributions, outliers, group differences and change over time for one snapshot. Exploratory only."
         meta={<Badge variant="secondary">exploratory</Badge>}
       />
       {sel.bar}
@@ -267,7 +267,7 @@ function Distributions({
             cell: (s) => (
               <button
                 type="button"
-                className="font-mono text-xs text-primary hover:underline"
+                className="font-mono text-xs text-accent-foreground hover:underline"
                 onClick={() => setColumn(s.column)}
               >
                 {columnLabel(s.column)}
@@ -385,9 +385,7 @@ function Groups({
         <Alert variant="info">
           <AlertTitle>Game version comparison</AlertTitle>
           <AlertDescription>
-            Differences between app versions can reflect content or timing changes; a version that
-            shifts an indicator should be reviewed before pooling (the scoring dictionary records
-            the version of every value).
+            Review a version that shifts an indicator before pooling it.
           </AlertDescription>
         </Alert>
       )}
@@ -514,7 +512,7 @@ function Longitudinal({
         <div className="grid gap-4 xl:grid-cols-2">
           <ScatterRegressionChart
             title={`${first} vs ${second} · ${columnLabel(column)}`}
-            description="Each point is one participant measured on both occasions, with the OLS line and 95% band."
+            description="One point per participant on both occasions, with OLS line and 95% band."
             data={{
               points: pairs.map((p) => ({
                 x: p.first,
@@ -596,7 +594,7 @@ function Longitudinal({
             cell: (a) => (
               <button
                 type="button"
-                className="font-mono text-xs text-primary hover:underline"
+                className="font-mono text-xs text-accent-foreground hover:underline"
                 onClick={() => setColumn(a.column)}
               >
                 {columnLabel(a.column)}

@@ -63,7 +63,7 @@ export function ReliabilityTab({
     <div className="space-y-6">
       <Section
         title={`Test–retest · ${constructName}`}
-        description={`ICC(A,1) (absolute agreement, McGraw & Wong) between the first two occasions, pooled and by language. At least ${formatInteger(science.gates.retest.minPairsPerCell)} pairs per cell are required; Pearson r is shown for reference only and never feeds gates.`}
+        description={`ICC(A,1) (absolute agreement, McGraw & Wong) between the first two occasions, pooled and by language. At least ${formatInteger(science.gates.retest.minPairsPerCell)} pairs per cell needed. Pearson r is for reference only.`}
       >
         <div className="grid gap-4 xl:grid-cols-2">
           {retest.length + indicators.length > 0 ? (
@@ -138,7 +138,7 @@ export function ReliabilityTab({
 
       <Section
         title="Reliability by group"
-        description={`Composite internal consistency (omega total where at least three indicators; alpha otherwise) and retest ICC per language group. Gate rule B2: point ≥ ${formatCoefficient(science.gates.reliability.pointMin)}, lower bound ≥ ${formatCoefficient(science.gates.reliability.lowerBoundMin)}.`}
+        description={`Omega total (alpha under three indicators) and retest ICC per language. Gate: point ≥ ${formatCoefficient(science.gates.reliability.pointMin)}, lower bound ≥ ${formatCoefficient(science.gates.reliability.lowerBoundMin)}.`}
       >
         <ResultTable
           exportName={`reliability-by-group-${construct}`}

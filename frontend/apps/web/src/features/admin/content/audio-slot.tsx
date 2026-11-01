@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangleIcon,
   CheckCircle2Icon,
@@ -9,10 +10,14 @@ import {
   XCircleIcon,
 } from 'lucide-react';
 import { useId, useState } from 'react';
+import { TimeStamp } from '@/components/data/audit-stamp';
 import { StatusBadge } from '@/components/data/status-badge';
 import { Button } from '@/components/ui/button';
+import { unwrap } from '@/lib/api/client';
+import { useApi } from '@/lib/auth/auth-context';
 import { formatBytes } from '@/lib/format';
-import { NeedsApi } from '../shared/components';
+import { useAdminMutation } from '../shared/components';
+import { adminKeys } from '../shared/query-keys';
 import {
   type CheckStatus,
   type DecodedAudio,
@@ -64,7 +69,8 @@ const OVERALL: Record<
 
 /**
  * Audio slot for one line × language: pick a take, measure it in the browser against qc.yaml and see
- * pass/warn/fail per check. Uploading into the manifest needs an API endpoint that does not exist yet.
+ * pass/warn/fail per check, then upload it (`POST /api/v1/admin/content/audio/{line}/{language}`; the
+ * server re-measures duration and level and queues it for QC).
  */
 export function AudioSlot({
   lineId,
@@ -82,6 +88,32 @@ export function AudioSlot({
   readonly voiceForbidden: boolean;
 }) {
   const inputId = useId();
+  const api = useApi();
+  const takes = useQuery({
+    queryKey: adminKeys.audioTakes(lineId, language),
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/v1/admin/content/audio/{line_id}/{language}', {
+          params: { path: { line_id: lineId, language } },
+        }),
+      ),
+  });
+  const upload = useAdminMutation({
+    mutationFn: (f: File) =>
+      unwrap(
+        api.POST('/api/v1/admin/content/audio/{line_id}/{language}', {
+          params: { path: { line_id: lineId, language } },
+          body: { file: f as unknown as string },
+          bodySerializer: () => {
+            const form = new FormData();
+            form.append('file', f, f.name);
+            return form;
+          },
+        }),
+      ),
+    invalidate: [adminKeys.audioTakes(lineId, language), adminKeys.contentLines()],
+    success: 'Take uploaded for QC.',
+  });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,14 +170,12 @@ export function AudioSlot({
       </div>
       {voiceForbidden && (
         <p className="text-xs text-muted-foreground">
-          This line is on the never-voice list: it is never routed to the speakers (headset only
-          where allowed).
+          Never played on the speakers (headset only).
         </p>
       )}
       <p className="text-xs text-muted-foreground">
         Target {(targetDurationMs / 1000).toFixed(2)} s · loudness {qc.targetLufs} ±{' '}
-        {qc.toleranceLu} LU · true peak ≤ {qc.truePeakCeilingDbtp} dBTP
-        (tools/audio-pipeline/config/qc.yaml). Measured locally; nothing leaves this browser.
+        {qc.toleranceLu} LU · true peak ≤ {qc.truePeakCeilingDbtp} dBTP. Re-measured on upload.
       </p>
       {busy && (
         <p className="text-sm text-muted-foreground" role="status">
@@ -185,13 +215,37 @@ export function AudioSlot({
               );
             })}
           </ul>
-          <Button size="sm" disabled title="The upload endpoint does not exist yet">
-            <UploadIcon aria-hidden="true" />
-            Upload to manifest slot
-          </Button>
+          {overall !== 'fail' && (
+            <Button
+              size="sm"
+              disabled={upload.isPending}
+              onClick={() => upload.mutate(file)}
+              data-testid={`audio-upload-${language}`}
+            >
+              <UploadIcon aria-hidden="true" />
+              {upload.isPending ? 'Uploading…' : 'Upload take'}
+            </Button>
+          )}
         </div>
       )}
-      <NeedsApi endpoint="audioUpload" compact />
+      {(takes.data?.length ?? 0) > 0 && (
+        <ul className="space-y-1 border-t pt-2 text-xs" aria-label="Uploaded takes">
+          {(takes.data ?? []).slice(0, 5).map((t) => (
+            <li key={t.id} className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={t.status} />
+              <span className="font-medium">{t.filename}</span>
+              <span className="text-muted-foreground">
+                {t.duration_ms === null || t.duration_ms === undefined
+                  ? formatBytes(t.size_bytes)
+                  : `${(t.duration_ms / 1000).toFixed(2)} s`}
+                {typeof t.peak_dbfs === 'number' ? ` · peak ${t.peak_dbfs.toFixed(1)} dBFS` : ''}
+              </span>
+              <span className="text-muted-foreground">by {t.uploaded_by}</span>
+              <TimeStamp value={t.created_at} className="text-muted-foreground" />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

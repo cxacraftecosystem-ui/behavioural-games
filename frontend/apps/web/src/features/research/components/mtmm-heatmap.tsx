@@ -82,7 +82,7 @@ export function MtmmHeatmap({
       title={`Multitrait–multimethod matrix${matrix.language ? ` · ${matrix.language}` : ' · pooled'}`}
       description={
         focus
-          ? `Heavy outline: ${focus.replaceAll('_', ' ')} validity diagonal (game × self-report). Dashed: its discriminant (heterotrait) correlations. Others faded.`
+          ? `Heavy outline: ${focus.replaceAll('_', ' ')} validity diagonal (game × self-report). Dashed: its heterotrait correlations.`
           : 'Outlined cells are validity diagonals (same trait, different method).'
       }
       table={table}

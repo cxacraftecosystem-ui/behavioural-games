@@ -117,7 +117,8 @@ export function GameDetail({ game }: { readonly game: Game }) {
             {list.length === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="flex items-end gap-2">
+        {/* A version picker with its one action beside it: a toolbar, not an action row. */}
+        <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <Label htmlFor="game-version" className="text-xs">
               Version
@@ -183,7 +184,7 @@ export function GameDetail({ game }: { readonly game: Game }) {
                       {d.approved_by.join(' and ')} · <TimeStamp value={d.approved_at} />
                     </span>
                   ) : (
-                    'Not approved: kiosks will not load this version'
+                    'Not approved — kiosks won’t load it'
                   ),
                 ],
               ]}
@@ -192,14 +193,19 @@ export function GameDetail({ game }: { readonly game: Game }) {
           </TabsContent>
 
           <TabsContent value="editor" className="pt-2">
-            <ConfigEditor base={d.config} sourcePath={d.source_path} readOnly={isApproved} />
+            <ConfigEditor
+              base={d.config}
+              sourcePath={d.source_path}
+              readOnly={isApproved}
+              gameId={game.game_id}
+              latestVersion={list.at(-1)?.version ?? null}
+              onSaved={setSelected}
+            />
           </TabsContent>
 
           <TabsContent value="diff" className="pt-2">
             {approvedVersion === null ? (
-              <p className="text-sm text-muted-foreground">
-                No approved version yet: everything in this version is new.
-              </p>
+              <p className="text-sm text-muted-foreground">No approved version yet.</p>
             ) : approvedVersion === current ? (
               <p className="text-sm text-muted-foreground">This is the approved version.</p>
             ) : approved.isPending ? (
@@ -216,8 +222,7 @@ export function GameDetail({ game }: { readonly game: Game }) {
           <TabsContent value="trials" className="pt-2">
             {(d.trial_definitions ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No server-side trial definitions for this version (micro-games schedule trials from
-                blocks at run time).
+                No stored trial definitions. Trials are scheduled from blocks at run time.
               </p>
             ) : (
               <div className="overflow-x-auto rounded-md border">
@@ -314,7 +319,7 @@ export function GameDetail({ game }: { readonly game: Game }) {
             if (!o) approve.reset();
           }}
           title="Approve game version"
-          description="Approved versions are frozen and become loadable by kiosks (bundle check). Two different people must sign; both names are recorded in the audit log."
+          description="Freezes this version for kiosks. Needs two different people."
           subject={`${game.game_id}@${d.version} · sha256 ${d.sha256.slice(0, 16)}`}
           pending={approve.isPending}
           error={approve.error}

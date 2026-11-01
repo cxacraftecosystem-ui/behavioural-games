@@ -17,16 +17,30 @@ export default function GlobalError({
           placeItems: 'center',
           minHeight: '100dvh',
           margin: 0,
-          background: '#f9f9f7',
-          color: '#0b0b0b',
+          background: '#f7f6fb',
+          color: '#1e1b2e',
         }}
       >
         <main role="alert" style={{ textAlign: 'center', padding: 16 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 600 }}>The application failed to load</h1>
-          <p style={{ color: '#5c5b57', fontSize: 14 }}>
-            {error.digest ? `Reference ${error.digest}. ` : ''}Reload the page or try again shortly.
+          <h1 style={{ fontSize: 20, fontWeight: 600 }}>Something went wrong</h1>
+          <p style={{ color: '#615d7a', fontSize: 14 }}>
+            {error.digest ? `Reference ${error.digest}. ` : ''}Reload the page to try again.
           </p>
-          <button type="button" onClick={reset} style={{ padding: '6px 12px', fontSize: 14 }}>
+          <button
+            type="button"
+            onClick={reset}
+            style={{
+              minHeight: 40,
+              padding: '8px 16px',
+              fontSize: 14,
+              fontWeight: 500,
+              border: 0,
+              borderRadius: 12,
+              background: 'oklch(0.47 0.198 305)',
+              color: '#ffffff',
+              cursor: 'pointer',
+            }}
+          >
             Try again
           </button>
         </main>

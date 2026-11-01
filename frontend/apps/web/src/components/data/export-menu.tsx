@@ -150,8 +150,7 @@ export function ExportMenu<T>({
           <DialogHeader>
             <DialogTitle>Why is this export needed?</DialogTitle>
             <DialogDescription>
-              Exports over {threshold} rows need a justification. It is stored with the export
-              record and written into the file metadata.
+              Exports over {threshold} rows need a reason. It’s written into the file.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">

@@ -1,13 +1,25 @@
+/*
+ * Staff screens follow .claude/skills/field-repo-frontend: purple-700 is the only action colour, the
+ * neutrals are the ink / line / surface ladder, focus is one purple outline. The participant test
+ * screens (.test, .finished) keep their neutral grey stage: the cards' colours are the stimulus.
+ * Light only: a supervised tablet in a field room, and the test stage must look identical every time.
+ */
 :root {
-  --bg: #f5f5f7;
+  --bg: #f7f6fb;
   --panel: #ffffff;
-  --ink: #1d1d1f;
-  --muted: #5f6368;
-  --line: #d2d2d7;
-  --primary: #1f5fd6;
-  --danger: #c0262d;
-  --ok: #1b7f3b;
-  --warn: #9a6100;
+  --ink: #1e1b2e;
+  --muted: #615d7a;
+  --line: #e4e2ef;
+  --primary: oklch(0.47 0.198 305);
+  --primary-hover: oklch(0.4 0.18 305);
+  --accent: oklch(0.977 0.013 305);
+  --accent-line: oklch(0.828 0.1 305);
+  --danger: #dc2626;
+  --ok: #15803d;
+  --warn: #92400e;
+  --shadow-sm: 0 1px 2px rgba(46, 16, 101, 0.06);
+  --shadow-cta: 0 8px 24px oklch(0.47 0.198 305 / 0.28);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
   font-family:
     system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari",
@@ -40,12 +52,29 @@ select {
   -webkit-user-select: text;
   user-select: text;
   font: inherit;
+  color: var(--ink);
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
+  border-radius: 12px;
+  background: var(--panel);
   min-height: 48px;
   width: 100%;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: oklch(0.56 0.205 305);
+  box-shadow: 0 0 0 4px oklch(0.56 0.205 305 / 0.15);
+}
+
+/* The keyboard's mark: one purple outline on every control. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 label {
@@ -57,7 +86,9 @@ label {
 }
 
 h1 {
-  font-size: 1.6rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   margin: 0 0 12px;
 }
 
@@ -71,8 +102,9 @@ h2 {
   margin: 24px auto;
   padding: 24px;
   background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  box-shadow: var(--shadow-sm);
 }
 
 .panel.narrow {
@@ -113,14 +145,64 @@ form.panel {
   border-bottom: 1px solid var(--line);
 }
 
+/*
+ * Button rows (skill §19.2): one button is centred, two share one line in equal halves, three or more
+ * stack on a narrow screen and become pills from 640px. Decided from the RENDERED children, so a
+ * conditionally rendered button never leaves half a line. A .danger button goes last, set apart.
+ * Not for toolbars, filters or pagers: those stay .row.
+ */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.actions > .danger {
+  order: 99;
+}
+
+@media (max-width: 639.98px) {
+  .actions:has(> :nth-child(2):last-child) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .actions:has(> :nth-child(2):last-child) > * {
+    min-width: 0;
+    white-space: normal;
+  }
+  .actions:has(> :nth-child(3)) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 640px) {
+  .actions:has(> :nth-child(2)) {
+    justify-content: flex-end;
+  }
+  .actions:has(> :nth-child(3)) > .btn {
+    border-radius: 9999px;
+  }
+  .actions > .danger {
+    margin-left: 8px;
+  }
+}
+
 .btn {
   font: inherit;
   font-weight: 600;
   min-height: 48px;
   padding: 10px 20px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid transparent;
   cursor: pointer;
+  transition:
+    background-color 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
 }
 
 .btn.big {
@@ -134,15 +216,31 @@ form.panel {
   color: #fff;
 }
 
+.btn.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: var(--shadow-cta);
+}
+
 .btn.secondary {
-  background: #fff;
+  background: var(--panel);
   color: var(--ink);
   border-color: var(--line);
 }
 
+.btn.secondary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent-line);
+}
+
+/* Destructive = outlined red, never a filled second accent. */
 .btn.danger {
-  background: var(--danger);
-  color: #fff;
+  background: var(--panel);
+  color: var(--danger);
+  border-color: #fecaca;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: #fee2e2;
 }
 
 .btn:disabled {
@@ -188,6 +286,23 @@ form.panel {
   padding: 6px 8px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat component styles */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat component styles */
+    animation-delay: 0ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat component styles */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat component styles */
+    transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat component styles */
+    transition-delay: 0ms !important;
+  }
 }
 
 /* ---------------------------------------------------------------- participant screens */

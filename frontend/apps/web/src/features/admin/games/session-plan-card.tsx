@@ -47,10 +47,7 @@ export function SessionPlanCard() {
     queryFn: () => unwrap(api.GET('/api/v1/games/session-plan')),
   });
   return (
-    <Section
-      title="Session plan"
-      description="Module order and time budgets for each pathway (read-only; changes go through content review)"
-    >
+    <Section title="Session plan" description="Module order and time budgets per pathway">
       <QueryState query={plan}>
         {(data) => {
           const p = isPlainObject(data.plan) ? data.plan : {};

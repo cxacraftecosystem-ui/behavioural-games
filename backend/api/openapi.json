@@ -1470,6 +1470,76 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "games"
+        ],
+        "summary": "Save an edited config as a new draft version (validated; locked fields refused)",
+        "operationId": "create_draft_version_api_v1_games__game_id__versions_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameDraftIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameVersionOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/games/{game_id}/versions/{version}": {
@@ -8042,6 +8112,332 @@
         }
       }
     },
+    "/api/v1/admin/kiosks/{kiosk_id}/commands": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Queue a signed remote command for a kiosk (idempotent per key)",
+        "operationId": "create_kiosk_command_api_v1_admin_kiosks__kiosk_id__commands_post",
+        "parameters": [
+          {
+            "name": "kiosk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kiosk Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KioskCommandIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskCommandOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remote commands of a kiosk",
+        "operationId": "list_kiosk_commands_api_v1_admin_kiosks__kiosk_id__commands_get",
+        "parameters": [
+          {
+            "name": "kiosk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kiosk Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KioskCommandOut"
+                  },
+                  "title": "Response List Kiosk Commands Api V1 Admin Kiosks  Kiosk Id  Commands Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/kiosks/{kiosk_id}/commands/{command_id}/cancel": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Cancel a command the kiosk has not acted on",
+        "operationId": "cancel_kiosk_command_api_v1_admin_kiosks__kiosk_id__commands__command_id__cancel_post",
+        "parameters": [
+          {
+            "name": "kiosk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kiosk Id"
+            }
+          },
+          {
+            "name": "command_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Command Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskCommandOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/kiosk-device/commands": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Signed commands waiting for this kiosk (device token)",
+        "operationId": "device_commands_api_v1_admin_kiosk_device_commands_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KioskCommandEnvelope"
+                  },
+                  "type": "array",
+                  "title": "Response Device Commands Api V1 Admin Kiosk Device Commands Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/kiosk-device/commands/{command_id}/ack": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Report the outcome of a command (device token; idempotent)",
+        "operationId": "ack_device_command_api_v1_admin_kiosk_device_commands__command_id__ack_post",
+        "parameters": [
+          {
+            "name": "command_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Command Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KioskCommandAck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KioskCommandOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/deployments": {
       "post": {
         "tags": [
@@ -8821,6 +9217,185 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SettingOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Staff accounts with roles and study scopes",
+        "operationId": "list_users_api_v1_admin_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Users Api V1 Admin Users Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{sub}/grants": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set a staff account's roles and study scope (applies at its next sign-in)",
+        "operationId": "put_user_grants_api_v1_admin_users__sub__grants_put",
+        "parameters": [
+          {
+            "name": "sub",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sub"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserGrantsIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/policies/{policy_version}/sign": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sign the approved deployment policy (two-person approval and PRV-01 combinations re-checked)",
+        "operationId": "sign_policy_api_v1_admin_policies__policy_version__sign_post",
+        "parameters": [
+          {
+            "name": "policy_version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Policy Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicySignatureOut"
                 }
               }
             }
@@ -9783,22 +10358,199 @@
         }
       }
     },
+    "/api/v1/admin/retention/policy": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The retention rules the server applies",
+        "operationId": "retention_policy_api_v1_admin_retention_policy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPolicyOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/retention/runs": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Retention runs, newest first",
+        "operationId": "retention_runs_api_v1_admin_retention_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "Page size",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Page size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RetentionRunOut"
+                  },
+                  "title": "Response Retention Runs Api V1 Admin Retention Runs Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/legal-holds": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Legal holds (active first)",
+        "operationId": "list_holds_api_v1_admin_legal_holds_get",
+        "parameters": [
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Active Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LegalHoldOut"
+                  },
+                  "title": "Response List Holds Api V1 Admin Legal Holds Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "admin"
         ],
-        "summary": "Place a legal hold (blocks purge and erasure)",
+        "summary": "Place a legal hold (blocks purge, erasure and kiosk wipes)",
         "operationId": "create_hold_api_v1_admin_legal_holds_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LegalHoldIn"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -9806,9 +10558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Create Hold Api V1 Admin Legal Holds Post"
+                  "$ref": "#/components/schemas/LegalHoldOut"
                 }
               }
             }
@@ -9945,6 +10695,282 @@
                     "additionalProperties": true
                   },
                   "title": "Response Erasure Requests Api V1 Admin Erasure Requests Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content/lines": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Voice lines with current ITC status per language",
+        "operationId": "content_lines_api_v1_admin_content_lines_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentLinesOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content/lines/{line_id}/languages/{language}/transitions": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Record an ITC sign-off for one line and language (workflow rules enforced)",
+        "operationId": "create_line_transition_api_v1_admin_content_lines__line_id__languages__language__transitions_post",
+        "parameters": [
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          },
+          {
+            "name": "language",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Language"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineTransitionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineTransitionOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content/audio/{line_id}/{language}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Upload a recording take (the server re-measures duration, peak and RMS of PCM WAV)",
+        "operationId": "upload_audio_take_api_v1_admin_content_audio__line_id___language__post",
+        "parameters": [
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          },
+          {
+            "name": "language",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Language"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_audio_take_api_v1_admin_content_audio__line_id___language__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioTakeOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Recording takes, newest first",
+        "operationId": "list_audio_takes_api_v1_admin_content_audio__line_id___language__get",
+        "parameters": [
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          },
+          {
+            "name": "language",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AudioTakeOut"
+                  },
+                  "title": "Response List Audio Takes Api V1 Admin Content Audio  Line Id   Language  Get"
                 }
               }
             }
@@ -10271,6 +11297,102 @@
           "arm_id"
         ],
         "title": "ArmIn"
+      },
+      "AudioTakeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "line_id": {
+            "type": "string",
+            "title": "Line Id"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "peak_dbfs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Dbfs"
+          },
+          "rms_dbfs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rms Dbfs"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "uploaded_by": {
+            "type": "string",
+            "title": "Uploaded By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "line_id",
+          "language",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "sha256",
+          "duration_ms",
+          "peak_dbfs",
+          "rms_dbfs",
+          "status",
+          "uploaded_by",
+          "created_at"
+        ],
+        "title": "AudioTakeOut"
       },
       "AuditOut": {
         "properties": {
@@ -10610,6 +11732,21 @@
           "spec"
         ],
         "title": "Body_stage_import_api_v1_assessment_responses_imports_post"
+      },
+      "Body_upload_audio_take_api_v1_admin_content_audio__line_id___language__post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "WAV (PCM) or Ogg/Opus, at most 10 MB"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_audio_take_api_v1_admin_content_audio__line_id___language__post"
       },
       "CohortIn": {
         "properties": {
@@ -11011,6 +12148,102 @@
           "contact"
         ],
         "title": "ContactCreate"
+      },
+      "ContentLineOut": {
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "title": "Line Id"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "module_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module Id"
+          },
+          "voice_forbidden": {
+            "type": "boolean",
+            "title": "Voice Forbidden"
+          },
+          "target_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Duration Ms"
+          },
+          "languages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LineLanguageState"
+            },
+            "type": "object",
+            "title": "Languages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "line_id",
+          "category",
+          "module_id",
+          "voice_forbidden",
+          "target_duration_ms",
+          "languages"
+        ],
+        "title": "ContentLineOut"
+      },
+      "ContentLinesOut": {
+        "properties": {
+          "catalogue_version": {
+            "type": "string",
+            "title": "Catalogue Version"
+          },
+          "reference_language": {
+            "type": "string",
+            "title": "Reference Language"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ContentLineOut"
+            },
+            "type": "array",
+            "title": "Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "catalogue_version",
+          "reference_language",
+          "languages",
+          "lines"
+        ],
+        "title": "ContentLinesOut"
       },
       "ContentVersionOut": {
         "properties": {
@@ -12252,6 +13485,28 @@
           "reason"
         ],
         "title": "FreezeIn"
+      },
+      "GameDraftIn": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$",
+            "title": "Version",
+            "description": "Semantic version"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "description": "Full game config (game-config contract)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "config"
+        ],
+        "title": "GameDraftIn"
       },
       "GameOut": {
         "properties": {
@@ -13610,6 +14865,248 @@
         ],
         "title": "JobRef"
       },
+      "KioskCommandAck": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "acknowledged",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result",
+            "description": "Scrubbed counters only, never participant data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "KioskCommandAck"
+      },
+      "KioskCommandEnvelope": {
+        "properties": {
+          "command_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Command Id"
+          },
+          "kiosk_id": {
+            "type": "string",
+            "title": "Kiosk Id"
+          },
+          "command": {
+            "type": "string",
+            "title": "Command"
+          },
+          "issued_at": {
+            "type": "string",
+            "title": "Issued At",
+            "description": "Exactly the signed string (YYYY-MM-DDTHH:MM:SSZ)"
+          },
+          "expires_at": {
+            "type": "string",
+            "title": "Expires At",
+            "description": "Exactly the signed string (YYYY-MM-DDTHH:MM:SSZ)"
+          },
+          "nonce": {
+            "type": "string",
+            "title": "Nonce"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature",
+            "description": "Base64 Ed25519 over the RFC 8785 JSON of the other envelope fields"
+          },
+          "key_id": {
+            "type": "string",
+            "title": "Key Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "command_id",
+          "kiosk_id",
+          "command",
+          "issued_at",
+          "expires_at",
+          "nonce",
+          "signature",
+          "key_id"
+        ],
+        "title": "KioskCommandEnvelope"
+      },
+      "KioskCommandIn": {
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "lock",
+              "unlock",
+              "restart",
+              "sync",
+              "pull_logs",
+              "wipe"
+            ],
+            "title": "Command"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Idempotency Key"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "confirm_kiosk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm Kiosk Id",
+            "description": "Must repeat the kiosk id for a wipe"
+          }
+        },
+        "type": "object",
+        "required": [
+          "command",
+          "idempotency_key"
+        ],
+        "title": "KioskCommandIn"
+      },
+      "KioskCommandOut": {
+        "properties": {
+          "command_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Command Id"
+          },
+          "kiosk_id": {
+            "type": "string",
+            "title": "Kiosk Id"
+          },
+          "command": {
+            "type": "string",
+            "title": "Command"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "issued_by": {
+            "type": "string",
+            "title": "Issued By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "command_id",
+          "kiosk_id",
+          "command",
+          "status",
+          "reason",
+          "issued_by",
+          "created_at",
+          "expires_at",
+          "delivered_at",
+          "acknowledged_at",
+          "result",
+          "error"
+        ],
+        "title": "KioskCommandOut"
+      },
       "KioskCreate": {
         "properties": {
           "kiosk_id": {
@@ -13886,6 +15383,58 @@
         ],
         "title": "LegalHoldIn"
       },
+      "LegalHoldOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "scope_kind": {
+            "type": "string",
+            "title": "Scope Kind"
+          },
+          "scope_value": {
+            "type": "string",
+            "title": "Scope Value"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scope_kind",
+          "scope_value",
+          "reason",
+          "created_by",
+          "created_at",
+          "released_at"
+        ],
+        "title": "LegalHoldOut"
+      },
       "LicensingUpdate": {
         "properties": {
           "holder": {
@@ -13971,6 +15520,158 @@
           "allowed_use"
         ],
         "title": "LicensingUpdate"
+      },
+      "LineLanguageState": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "recording_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recording Status"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/LineTransitionOut"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "takes": {
+            "type": "integer",
+            "title": "Takes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "recording_status",
+          "history",
+          "takes"
+        ],
+        "title": "LineLanguageState"
+      },
+      "LineTransitionIn": {
+        "properties": {
+          "to_status": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "To Status"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Role"
+          },
+          "signer": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Signer",
+            "description": "Full name of the person signing off"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "to_status",
+          "role",
+          "signer"
+        ],
+        "title": "LineTransitionIn"
+      },
+      "LineTransitionOut": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "Null for sign-offs recorded in the repository files"
+          },
+          "line_id": {
+            "type": "string",
+            "title": "Line Id"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "from_status": {
+            "type": "string",
+            "title": "From Status"
+          },
+          "to_status": {
+            "type": "string",
+            "title": "To Status"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "signer": {
+            "type": "string",
+            "title": "Signer"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "'api' for console sign-offs, else the repository source (e.g. xlsx:<file>)"
+          },
+          "recorded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded By"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO-8601 time (API) or date (repository)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "line_id",
+          "language",
+          "from_status",
+          "to_status",
+          "role",
+          "signer",
+          "comment",
+          "source",
+          "created_at"
+        ],
+        "title": "LineTransitionOut"
       },
       "LinkCreate": {
         "properties": {
@@ -15108,6 +16809,50 @@
         ],
         "title": "PermissionOut"
       },
+      "PolicySignatureOut": {
+        "properties": {
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "signature": {
+            "type": "string",
+            "title": "Signature"
+          },
+          "key_id": {
+            "type": "string",
+            "title": "Key Id"
+          },
+          "algorithm": {
+            "type": "string",
+            "title": "Algorithm"
+          },
+          "signed_by": {
+            "type": "string",
+            "title": "Signed By"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Signed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy_version",
+          "sha256",
+          "signature",
+          "key_id",
+          "algorithm",
+          "signed_by",
+          "signed_at"
+        ],
+        "title": "PolicySignatureOut"
+      },
       "ProtocolIn": {
         "properties": {
           "version": {
@@ -16089,6 +17834,145 @@
         },
         "type": "object",
         "title": "RetentionIn"
+      },
+      "RetentionPolicyOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RetentionRuleOut"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "sha256",
+          "rules"
+        ],
+        "title": "RetentionPolicyOut"
+      },
+      "RetentionRuleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Class"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "ttl_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl Days"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "data_class",
+          "description",
+          "ttl_days",
+          "enabled"
+        ],
+        "title": "RetentionRuleOut"
+      },
+      "RetentionRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "policy_sha256": {
+            "type": "string",
+            "title": "Policy Sha256"
+          },
+          "report": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Report"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "triggered_by": {
+            "type": "string",
+            "title": "Triggered By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "started_at",
+          "finished_at",
+          "dry_run",
+          "policy_sha256",
+          "report",
+          "status",
+          "triggered_by"
+        ],
+        "title": "RetentionRunOut"
       },
       "RetestCompleteIn": {
         "properties": {
@@ -17957,6 +19841,124 @@
         ],
         "title": "UploadBatchResultSummary",
         "description": "UploadBatchResultSummary"
+      },
+      "UserGrantsIn": {
+        "properties": {
+          "roles": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "researcher",
+                "administrator",
+                "analyst"
+              ]
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Roles"
+          },
+          "studies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Studies",
+            "description": "Study ids; [\"*\"] = every study"
+          },
+          "disabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "roles"
+        ],
+        "title": "UserGrantsIn"
+      },
+      "UserOut": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "studies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Studies"
+          },
+          "disabled": {
+            "type": "boolean",
+            "title": "Disabled"
+          },
+          "locked_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked Until"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "title": "Must Change Password"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "roles",
+          "studies",
+          "disabled",
+          "locked_until",
+          "last_login_at",
+          "must_change_password",
+          "created_at",
+          "created_by"
+        ],
+        "title": "UserOut"
       },
       "ValidationError": {
         "properties": {

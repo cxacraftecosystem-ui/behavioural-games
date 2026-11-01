@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   canonicalJson,
@@ -8,7 +6,6 @@ import {
   pointerWithin,
   sha256Hex,
 } from './canonical-json';
-import { MISSING_ENDPOINTS } from './missing-endpoints';
 import { checkApprovers } from './two-person';
 
 describe('canonicalJson', () => {
@@ -67,21 +64,5 @@ describe('checkApprovers', () => {
     expect(checkApprovers(['Dr Rao', 'dev-admin'], { exclude: ['dev-admin'] }).errors).toHaveLength(
       1,
     );
-  });
-});
-
-describe('missing endpoints', () => {
-  const openapi = JSON.parse(
-    readFileSync(
-      fileURLToPath(new URL('../../../../../../../backend/api/openapi.json', import.meta.url)),
-      'utf8',
-    ),
-  ) as { paths: Record<string, Record<string, unknown>> };
-
-  it('are still missing from backend/api/openapi.json (wire them up once they exist)', () => {
-    for (const e of Object.values(MISSING_ENDPOINTS)) {
-      const ops = openapi.paths[e.path];
-      expect(ops?.[e.method.toLowerCase()], `${e.method} ${e.path} now exists`).toBeUndefined();
-    }
   });
 });

@@ -17,14 +17,14 @@ export default function RootError({
       role="alert"
       className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center"
     >
-      <h1 className="text-xl font-semibold">Something went wrong</h1>
+      <h1 className="display-title text-3xl">Something went wrong</h1>
       <p className="max-w-md text-sm text-muted-foreground">
-        The page could not be displayed.{error.digest ? ` Reference ${error.digest}.` : ''}
+        Try again.{error.digest ? ` Reference ${error.digest}.` : ''}
       </p>
       <button
         type="button"
         onClick={reset}
-        className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+        className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
       >
         Try again
       </button>

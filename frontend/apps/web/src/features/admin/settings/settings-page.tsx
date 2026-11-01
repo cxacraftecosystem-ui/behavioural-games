@@ -15,10 +15,7 @@ export function AdminSettingsPage({ inputs }: { readonly inputs: SettingsInputs 
   const canAudit = usePermission({ all: ['audit.read'] });
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Settings"
-        description="Security and configuration: who can do what, the signed deployment policy with the plan's open-question defaults, data retention, runtime settings and the audit trail."
-      />
+      <PageHeader title="Settings" description="Access, deployment policy, retention and audit." />
       <Tabs defaultValue="policy">
         <TabsList className="flex-wrap">
           <TabsTrigger value="policy">Deployment policy</TabsTrigger>

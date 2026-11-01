@@ -95,7 +95,9 @@ test.describe('navigation per role', () => {
     test(`${role} sees exactly the permitted sections`, async ({ mockedPage: page }) => {
       await signIn(page, role);
       await expect(page).toHaveURL(/\/research$/);
-      const nav = page.getByRole('navigation', { name: 'Console' }).first();
+      // The menu sheet is the flat list of every destination (and the keyboard route to each).
+      await page.getByTestId('menu-button').click();
+      const nav = page.getByRole('navigation', { name: 'Console' });
       await expect(nav).toBeVisible();
       const links = nav.locator('a[data-testid^="nav-"]');
       await expect(links).toHaveCount(EXPECTED_NAV[role].length);
@@ -107,8 +109,14 @@ test.describe('navigation per role', () => {
       const last = EXPECTED_NAV[role][EXPECTED_NAV[role].length - 1] as string;
       await nav.locator(`a[href="${last}"]`).click();
       await expect(page).toHaveURL(new RegExp(`${last}$`));
+      await expect(nav).toBeHidden();
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      await expect(page.locator(`a[href="${last}"][aria-current="page"]`).first()).toBeVisible();
+      // Exactly one destination is marked current (longest base wins).
+      await page.getByTestId('menu-button').click();
+      await expect(nav.locator('a[aria-current="page"]')).toHaveCount(1);
+      await expect(nav.locator(`a[href="${last}"]`)).toHaveAttribute('aria-current', 'page');
+      await page.keyboard.press('Escape');
+      await expect(nav).toBeHidden();
 
       const forbidden = FORBIDDEN[role];
       if (forbidden) {

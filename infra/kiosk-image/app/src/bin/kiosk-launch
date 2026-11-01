@@ -21,7 +21,12 @@ export SHRIII_KIOSK_USER_DATA="$SHRIII_ROOT/userdata"
 # Chromium reads client certificates from $HOME/.pki/nssdb (imported by enrol / cert-renew).
 export HOME="$KIOSK_HOME"
 # Printer from config only; never from the inherited environment.
-unset SHRIII_PRINTER SHRIII_KIOSK_DEV_URL SHRIII_PLAINTEXT_OUTBOX SHRIII_ALLOW_HTTP_API
+unset SHRIII_PRINTER SHRIII_KIOSK_DEV_URL SHRIII_PLAINTEXT_OUTBOX SHRIII_ALLOW_HTTP_API SHRIII_DEVICE_TOKEN
+# Device token written by enrolment (0600): authenticates uploads and remote-command polling.
+if [ -s "$TOKEN_FILE" ]; then
+  SHRIII_DEVICE_TOKEN="$(cat "$TOKEN_FILE")"
+  export SHRIII_DEVICE_TOKEN
+fi
 
 # The renderer runs inside the snap's AppArmor/seccomp sandbox; Chromium's own sandbox cannot start as
 # root (see snapcraft.yaml).

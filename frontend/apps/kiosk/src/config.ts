@@ -2,7 +2,13 @@
  * Build-time kiosk configuration from VITE_* variables (compiled into the bundle). Unknown values fall
  * back to safe defaults; dev-only switches are forced off in production builds.
  */
-import type { BatteryArm, DevFlags, SessionMode, SiteMode } from '@shriii/kiosk-game';
+import {
+  type BatteryArm,
+  type DevFlags,
+  parsePinnedKeys,
+  type SessionMode,
+  type SiteMode,
+} from '@shriii/kiosk-game';
 
 const MODES: readonly SessionMode[] = ['public', 'pilot', 'think_aloud', 'retest', 'substudy'];
 const SITE_MODES: readonly SiteMode[] = ['supervised', 'open_public'];
@@ -29,6 +35,8 @@ export interface KioskConfig {
   readonly kioskId: string | null;
   /** Device token for the uploader (bridge builds only; production uses the Electron vault). */
   readonly deviceToken: string | null;
+  /** Pinned release-pack keys (public, so not bridge-gated). */
+  readonly pinnedReleaseKeys: Readonly<Record<string, string>>;
   /**
    * Test-only certified timing profile `ci-headless-test` (bridge builds with
    * VITE_TEST_TIMING_PROFILE=ci-headless-test; CI kiosk -> API -> scoring job). Never in production.
@@ -61,6 +69,7 @@ export function readConfig(env: ImportMetaEnv, isDev: boolean, search: string = 
     bridge,
     kioskId: kioskId === '' ? null : kioskId,
     deviceToken: token === '' ? null : token,
+    pinnedReleaseKeys: parsePinnedKeys(env.VITE_PINNED_RELEASE_KEYS),
     testTimingProfile: bridge && env.VITE_TEST_TIMING_PROFILE === 'ci-headless-test',
   };
 }

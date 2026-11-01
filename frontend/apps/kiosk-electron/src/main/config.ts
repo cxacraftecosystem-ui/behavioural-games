@@ -34,6 +34,11 @@ export interface KioskConfig {
   readonly kioskId: string;
   /** API origin (scheme://host[:port]) for uploads and the CSP connect-src. Null = offline only. */
   readonly apiOrigin: string | null;
+  /**
+   * Device token issued when the kiosk was registered (`kdt_…`, shown once in the admin console).
+   * Authenticates uploads and remote-command polling. Null = the kiosk does not talk to the API.
+   */
+  readonly deviceToken: string | null;
   /** Vite dev server URL (honoured only in unpackaged runs). */
   readonly devUrl: string | null;
   /** Backend recipient keys file (JSON array of {kid, public_key, not_before, not_after}). */
@@ -161,6 +166,10 @@ export function resolveConfig(options: {
     'apiOrigin',
     allowHttp,
   );
+  const deviceToken = str(pick('SHRIII_DEVICE_TOKEN', 'deviceToken'), 'deviceToken');
+  if (deviceToken !== null && !/^kdt_[A-Za-z0-9_-]{16,}$/.test(deviceToken)) {
+    throw new ConfigError('deviceToken must be the kdt_… token issued at registration');
+  }
   const devUrl = options.isPackaged
     ? null
     : parseOrigin(str(env.SHRIII_KIOSK_DEV_URL, 'devUrl'), 'devUrl', true);
@@ -179,6 +188,7 @@ export function resolveConfig(options: {
   return {
     kioskId,
     apiOrigin,
+    deviceToken,
     devUrl,
     recipientKeysPath: str(pick('SHRIII_RECIPIENT_KEYS', 'recipientKeysPath'), 'recipientKeysPath'),
     allowPlaintextOutbox:

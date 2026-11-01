@@ -28,6 +28,7 @@ import {
   WalkawayOverlay,
 } from './FallbackScreens.tsx';
 import { KioskErrorBoundary } from './KioskErrorBoundary.tsx';
+import { RemoteLockScreen } from './RemoteLockScreen.tsx';
 
 export interface KioskRuntimeViewProps {
   readonly options: KioskRuntimeOptions;
@@ -78,6 +79,7 @@ export function KioskRuntimeView({
   const [runtime, setRuntime] = useState<KioskRuntime | null>(null);
   const [view, setView] = useState<KioskSessionView | null>(null);
   const [failed, setFailed] = useState(false);
+  const [locked, setLocked] = useState(false);
   const optionsRef = useRef(options);
   const onRuntimeRef = useRef(onRuntime);
   onRuntimeRef.current = onRuntime;
@@ -100,12 +102,14 @@ export function KioskRuntimeView({
         }
         rt = created;
         const unsubView = created.controller.subscribe(setView);
+        const unsubLock = created.remote.subscribeLock(setLocked);
         const uninstall =
           typeof window !== 'undefined'
             ? installGlobalCrashHandlers(window, (err) => created.controller.reportError(err))
             : () => undefined;
         unsub = () => {
           unsubView();
+          unsubLock();
           uninstall();
         };
         setRuntime(created);
@@ -158,6 +162,8 @@ export function KioskRuntimeView({
         )}
         {view && <WalkawayOverlay stage={view.walkawayStage} />}
       </div>
+      {/* A sibling of the stage host, so swallowed touches never reach the input service. */}
+      {locked && <RemoteLockScreen />}
       {failed && (
         <div
           style={{

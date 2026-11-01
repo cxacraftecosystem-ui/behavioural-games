@@ -115,7 +115,7 @@ export function ValidationWorkbenchPage({ science }: { readonly science: Science
     <div className="space-y-6">
       <PageHeader
         title="Trait validation workbench"
-        description="Reliability, convergent and discriminant validity, structure and fairness evidence per construct, from the validation engine's results on one frozen snapshot. Thresholds come from gates.yaml; nothing here promotes a gate."
+        description="Reliability, validity, structure and fairness per construct, on one frozen snapshot."
         meta={
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline" className="font-mono">
@@ -140,7 +140,7 @@ export function ValidationWorkbenchPage({ science }: { readonly science: Science
               snapshot={sel.snapshot}
               runs={runs}
               science={science}
-              intro="No analyses have finished on this snapshot yet. Queue them below; results appear when the worker finishes."
+              intro="No finished analyses on this snapshot. Queue them below."
             />
           ) : (
             <>
@@ -201,10 +201,9 @@ export function ValidationWorkbenchPage({ science }: { readonly science: Science
                   />
                 </div>
                 <p className="max-w-md text-xs text-muted-foreground">
-                  The display target only moves the reference lines. Gate rule B1 stays at ICC(A,1)
-                  ≥ {formatCoefficient(gateTarget)} with lower bound ≥{' '}
-                  {formatCoefficient(science.gates.retest.lowerBoundMin)} (gates.yaml; pooled across
-                  languages ≥ {formatCoefficient(science.gates.retest.pooledLanguagePointMin)}).
+                  Moves the reference lines only. The gate stays at ICC(A,1) ≥{' '}
+                  {formatCoefficient(gateTarget)}, lower bound ≥{' '}
+                  {formatCoefficient(science.gates.retest.lowerBoundMin)}.
                 </p>
               </fieldset>
 
@@ -479,7 +478,7 @@ function CrossConstruct({
   return (
     <BarCiChart
       title="Cross-construct comparison"
-      description="Pooled primary criterion correlation (sign-keyed to the pre-registered direction) and retest ICC per construct, with 95% CIs. Literature expects r ≈ .20–.40; that is an expectation, not an acceptance threshold."
+      description="Primary criterion r and retest ICC per construct, with 95% CIs. Literature expects r ≈ .20–.40."
       data={data}
       height={340}
       synthetic={synthetic}

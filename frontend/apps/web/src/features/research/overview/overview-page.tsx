@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/data/status-badge';
 import { NavIcon } from '@/components/shell/nav-icon';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/auth/auth-context';
 import { ALL_STUDIES, ROLE_LABELS } from '@/lib/auth/permissions';
@@ -147,7 +148,7 @@ export function ResearchOverviewPage() {
     <div className="space-y-8">
       <PageHeader
         title="Research overview"
-        description="Recruitment, sessions, matched game × battery records and data quality. Counts only: no participant-level scores appear on this page."
+        description="Counts only. No participant scores appear here."
         meta={
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="outline">{scopeLabel}</Badge>
@@ -219,10 +220,7 @@ export function ResearchOverviewPage() {
         <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} />
       )}
 
-      <Section
-        title="Sessions"
-        description="Status and end reason of every session in scope; completion = completed ÷ ended."
-      >
+      <Section title="Sessions" description="Completion = completed ÷ ended.">
         {canSessions && sessions.isPending ? (
           <LoadingState rows={3} />
         ) : sessionSummary ? (
@@ -282,7 +280,7 @@ export function ResearchOverviewPage() {
       <Can all={['participants.read']}>
         <Section
           title="Recruitment breakdowns"
-          description="Enrolled participants by quota-cell field (from enrolment, not from game play). Bands only, never identity fields."
+          description="Enrolled participants by quota-cell field. Bands only."
         >
           {enrolLoading ? (
             <LoadingState rows={3} />
@@ -326,19 +324,11 @@ export function ResearchOverviewPage() {
                           {q.enrolled}/{q.target}
                         </span>
                       </div>
-                      <div
-                        className="h-1.5 overflow-hidden rounded-full bg-muted"
-                        role="progressbar"
-                        aria-label={`${cellLabel(q.cell)} quota`}
-                        aria-valuemin={0}
-                        aria-valuemax={q.target}
-                        aria-valuenow={q.enrolled}
-                      >
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${Math.min(100, (q.enrolled / q.target) * 100)}%` }}
-                        />
-                      </div>
+                      <ProgressBar
+                        label={`${cellLabel(q.cell)} quota`}
+                        value={q.enrolled}
+                        max={q.target}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -350,7 +340,7 @@ export function ResearchOverviewPage() {
 
       <Section
         title="Data quality"
-        description="Trial eligibility and session integrity distributions. Sessions with blocking quality flags never enter snapshots."
+        description="Sessions with blocking flags never enter snapshots."
       >
         <div className="grid gap-4 lg:grid-cols-2">
           {sessionSummary && sessionSummary.eventCounts.length > 0 && (
@@ -388,7 +378,7 @@ export function ResearchOverviewPage() {
           {validTrials.length > 0 && (
             <DistributionChart
               title="Valid trials per indicator value"
-              description="Trial eligibility: valid trials behind each indicator value (minimums are in the scoring dictionary)."
+              description="Valid trials behind each indicator value."
               data={{ values: validTrials, xLabel: 'Valid trials' }}
               provenance={{ n: validTrials.length, source: 'GET /features' }}
               synthetic={synthetic}
@@ -433,7 +423,7 @@ export function ResearchOverviewPage() {
               <ShieldCheckIcon className="size-4" aria-hidden="true" />
               Your access
             </CardTitle>
-            <CardDescription>Enforced by the API on every request and audited.</CardDescription>
+            <CardDescription>Every request is checked and audited.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex flex-wrap gap-1">
@@ -456,7 +446,7 @@ export function ResearchOverviewPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Studies in scope</CardTitle>
-            <CardDescription>Select one in the top bar to focus every page on it.</CardDescription>
+            <CardDescription>Pick one in the top bar to focus every page.</CardDescription>
           </CardHeader>
           <CardContent>
             {studiesLoading ? (
@@ -487,7 +477,7 @@ export function ResearchOverviewPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Sections</CardTitle>
-            <CardDescription>Only the sections your role can open are listed.</CardDescription>
+            <CardDescription>Sections your role can open.</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="grid gap-1 text-sm">
@@ -519,8 +509,8 @@ export function ResearchOverviewPage() {
 
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <ShieldCheckIcon className="size-3.5" aria-hidden="true" />
-        Every request is permission-checked and audited by the API. Figures refreshed{' '}
-        {formatDateTime(provenance.generatedAt)}.{studiesLoading && ' Loading studies…'}
+        Figures refreshed {formatDateTime(provenance.generatedAt)}.
+        {studiesLoading && ' Loading studies…'}
       </p>
     </div>
   );

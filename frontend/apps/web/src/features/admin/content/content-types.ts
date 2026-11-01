@@ -1,7 +1,8 @@
 /**
  * Serializable snapshot of the voice-line content the admin console reviews. Built on the server at
  * build time from the repository (content/i18n, tools/audio-pipeline/config/qc.yaml) by
- * `load-content.server.ts`, because the API has no content-line endpoint yet.
+ * `load-content.server.ts`. The live ITC status and the console's sign-offs come from
+ * `GET /api/v1/admin/content/lines` and are laid over it by `live-state.ts`.
  */
 
 export interface LineRecording {

@@ -58,7 +58,6 @@ export function RequirePermission({
 }) {
   const { principal } = useAuth();
   if (satisfies(principal, requirement)) return <>{children}</>;
-  const needs = [...(requirement.all ?? []), ...(requirement.any ?? [])];
   return (
     <EmptyState
       icon={LockIcon}
@@ -66,10 +65,8 @@ export function RequirePermission({
       description={
         description ??
         (requirement.study !== undefined && !canAccessStudy(principal, requirement.study ?? null)
-          ? 'This study is outside your study scope.'
-          : needs.length
-            ? `Requires ${requirement.any?.length ? 'one of ' : ''}${needs.join(', ')}.`
-            : 'Your role does not include this section.')
+          ? 'This study is outside your scope.'
+          : 'Your role doesn’t include this.')
       }
     />
   );

@@ -220,8 +220,7 @@ export function SyntheticNotice({
       <FlaskConicalIcon aria-hidden="true" />
       <AlertTitle>Synthetic / demo data</AlertTitle>
       <AlertDescription>
-        {what} (demo pipeline, known simulated traits). Use it to check the pipeline and the
-        displays; it is not evidence about real participants and never opens a gate.
+        {what}. Not evidence about real participants; it never opens a gate.
       </AlertDescription>
     </Alert>
   );

@@ -17,6 +17,7 @@ import { DataTable, dataColumnHelper } from '@/components/data/data-table';
 import { PageHeader, Section } from '@/components/data/page-header';
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/states';
 import { StatusBadge } from '@/components/data/status-badge';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -218,7 +219,7 @@ export function Gallery() {
     <div className="space-y-10">
       <PageHeader
         title="Design system"
-        description="Shared building blocks for the research and admin consoles. All figures on this page use generated data."
+        description="Console building blocks. Every figure here uses generated data."
         meta={<Badge variant="warning">Synthetic data only</Badge>}
       />
 
@@ -237,6 +238,7 @@ export function Gallery() {
       </Section>
 
       <Section title="Controls and status">
+        {/* Variant swatches, not an action row. */}
         <div className="flex flex-wrap items-center gap-2">
           <Button>
             <PlusIcon /> Primary
@@ -251,6 +253,28 @@ export function Gallery() {
           >
             <Badge>Visible with admin.settings</Badge>
           </Can>
+        </div>
+        {/* One per row so each example gets the full width the rule is written for. */}
+        <div className="grid gap-3" data-testid="action-group-examples">
+          <div className="rounded-lg border p-3" data-testid="action-row-1">
+            <ActionGroup>
+              <Button>Save</Button>
+            </ActionGroup>
+          </div>
+          <div className="rounded-lg border p-3" data-testid="action-row-2">
+            <ActionGroup>
+              <Button variant="outline">Cancel</Button>
+              <Button>Save changes</Button>
+            </ActionGroup>
+          </div>
+          <div className="rounded-lg border p-3" data-testid="action-row-3">
+            <ActionGroup>
+              <Button variant="destructive">Delete</Button>
+              <Button variant="outline">Duplicate</Button>
+              <Button variant="outline">Export</Button>
+              <Button>Open</Button>
+            </ActionGroup>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {['approved', 'running', 'provisional', 'withheld', 'failed', 'frozen', 'draft'].map(
@@ -271,10 +295,7 @@ export function Gallery() {
         </Alert>
       </Section>
 
-      <Section
-        title="Data table"
-        description="Sort, search, column visibility, density, pagination and governed CSV/Parquet export."
-      >
+      <Section title="Data table" description="Sort, search, columns, density, paging and export.">
         <DataTable
           data={demo.rows}
           columns={demoColumns}
@@ -317,10 +338,7 @@ export function Gallery() {
         </Tabs>
       </Section>
 
-      <Section
-        title="Charts"
-        description="Every figure offers a table view and CSV of the plotted values, plus N and provenance."
-      >
+      <Section title="Charts" description="Each figure has a table view, CSV, N and provenance.">
         <div className="grid gap-4 xl:grid-cols-2">
           <HeatmapChart
             title="Indicator × criterion correlations"

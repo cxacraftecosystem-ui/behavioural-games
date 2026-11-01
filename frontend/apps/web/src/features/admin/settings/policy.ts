@@ -8,7 +8,8 @@
  * - stores proposals in the `deployment_policy` runtime setting (`PUT /api/v1/admin/settings/{key}`,
  *   audited server-side with the previous and new value) with a canonical sha256, a version, the
  *   proposer and approvals (two different people);
- * - leaves `signature` null: signing needs the API (see missing-endpoints.ts → policySign).
+ * - is signed by the server once approved (`POST /api/v1/admin/policies/{version}/sign`, Ed25519 with
+ *   the release-pack key), which writes `signature` back into the setting.
  *
  * The plan defaults below seed a first proposal only when the server has no policy. Scientific
  * settings (band count, gate rules, thresholds) are not policy keys: they stay in

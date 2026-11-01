@@ -125,7 +125,7 @@ export function GatesPanel({
         }),
       ),
     onSuccess: async () => {
-      toast.success('Gate evaluation recorded (evaluate-only).');
+      toast.success('Gate evaluation recorded.');
       await qc.invalidateQueries({ queryKey: researchKeys.runs(snapshot.snapshot_id) });
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -146,7 +146,7 @@ export function GatesPanel({
       )}
       <Section
         title={`Trait gate · ${constructName}`}
-        description={`Evaluated by the engine against gates.yaml v${science.gates.version} from the latest succeeded run of each analysis on this snapshot.`}
+        description={`Gate rules v${science.gates.version}, from the latest successful runs on this snapshot.`}
         actions={
           <Can all={['validation.run']}>
             <Button
@@ -230,7 +230,7 @@ export function GatesPanel({
       {battery.length > 0 && (
         <Section
           title="Battery release gate"
-          description="Participant reports stay disabled (thank-you only) until this opens in at least two language groups. Fail closed."
+          description="Participant reports stay off until this opens in at least two language groups."
         >
           <ResultTable
             exportName="battery-gate"
@@ -270,14 +270,14 @@ export function GatesPanel({
 
       <Section
         title="Recorded status and sign-off"
-        description="What the release pack uses. Append-only; every change needs evidence ids and named approvers."
+        description="Every change needs evidence and named approvers."
       >
         <ResultTable
           exportName={`trait-gate-history-${construct}`}
           studyId={snapshot.study_id}
           rows={history.length ? history : recorded}
           rowKey={(g) => String(g.id)}
-          empty="No status has been recorded for this construct: it stays unvalidated and out of participant reports."
+          empty="No status recorded. It stays out of participant reports."
           columns={[
             {
               key: 'when',
@@ -327,8 +327,7 @@ export function GatesPanel({
           all={['gates.write']}
           fallback={
             <p className="text-xs text-muted-foreground">
-              Recording a gate status needs the gates.write permission (study admin). Share the
-              evaluation run id with them.
+              A study admin records gate status. Share the evaluation run id with them.
             </p>
           }
         >
@@ -483,9 +482,7 @@ function SignOffForm({
             {p}
           </span>
         ))}
-        <span className="text-xs text-muted-foreground">
-          The API rejects statuses above the gates.yaml cap.
-        </span>
+        <span className="text-xs text-muted-foreground">Statuses above the cap are refused.</span>
       </div>
     </form>
   );

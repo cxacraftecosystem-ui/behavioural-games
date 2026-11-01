@@ -183,14 +183,20 @@ test('reports: scientific report preview and exports', async ({ page }) => {
   await expect(page.getByText('Hypothesis tests')).toBeVisible();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: /Report \(HTML\)/ }).click();
-  expect((await download).suggestedFilename()).toMatch(/validation-report\.html$/);
+  expect((await download).suggestedFilename()).toMatch(
+    /^BehaviouralGames_Study_\d{4}-\d{2}-\d{2}_.+_Validation-Report\.html$/,
+  );
   await shot(page, '19-reports', false);
 });
 
 test('role gating: field administrators never see validation or models', async ({ page }) => {
   await signIn(page, 'administrator', { next: '/research/instruments' });
   await expect(page.getByRole('heading', { name: 'Instruments' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Instruments' }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Validation' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Models' })).toHaveCount(0);
+  // The menu sheet lists every destination the role may open, and only those.
+  await page.getByTestId('menu-button').click();
+  const nav = page.getByRole('navigation', { name: 'Console' });
+  await expect(nav.getByRole('link', { name: /^Instruments/ })).toBeVisible();
+  await expect(nav.getByRole('link', { name: /^Validation/ })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: /^Models/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
 });

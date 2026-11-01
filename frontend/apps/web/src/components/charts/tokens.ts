@@ -38,12 +38,12 @@ export interface ChartTokens {
 }
 
 export const LIGHT_TOKENS: ChartTokens = {
-  surface: '#fcfcfb',
-  ink: '#0b0b0b',
-  inkSecondary: '#52514e',
-  inkMuted: '#898781',
-  grid: '#e1e0d9',
-  axis: '#c3c2b7',
+  surface: '#ffffff',
+  ink: '#1e1b2e',
+  inkSecondary: '#3a3651',
+  inkMuted: '#615d7a',
+  grid: '#e4e2ef',
+  axis: '#dcd7ee',
   series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'],
   divergingNeg: '#1c5cab',
   divergingMid: '#f0efec',
@@ -90,7 +90,9 @@ export function readChartTokens(element?: Element): ChartTokens {
     statusWarning: cssVar(style, '--status-warning', f.statusWarning),
     statusSerious: cssVar(style, '--status-serious', f.statusSerious),
     statusCritical: cssVar(style, '--status-critical', f.statusCritical),
-    fontFamily: f.fontFamily,
+    // ECharts draws on canvas and cannot resolve a CSS variable: hand it the face next/font registered
+    // on <body> (Inter under a generated name).
+    fontFamily: window.getComputedStyle(document.body).fontFamily || f.fontFamily,
   };
 }
 

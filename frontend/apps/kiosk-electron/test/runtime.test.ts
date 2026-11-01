@@ -68,6 +68,7 @@ function fakeBridge(handlers: ReturnType<typeof createHandlers>): ShriiiKioskBri
       platform: 'electron',
       appVersion: '0',
       kioskId: 'kiosk-test',
+      deviceToken: null,
       updateChannel: null,
       encryption: 'sealed',
       printer: 'virtual',

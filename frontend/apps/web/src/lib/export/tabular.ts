@@ -1,3 +1,4 @@
+import { dataFileName } from '@/lib/naming';
 /**
  * Column specification shared by the CSV and Parquet writers and by `DataTable` exports.
  */
@@ -51,20 +52,18 @@ export function columnsFromRecords<T extends Record<string, unknown>>(
   }));
 }
 
-/** `shriii_<dataset>_<yyyymmdd>T<hhmm>Z.<ext>`; dataset is slugged to [a-z0-9_-]. */
+/** `BehaviouralGames_Dataset_<date>_<HHMM>_<Dataset-Name>_Export.<ext>` in IST (skill `naming`). */
 export function exportFileName(
   dataset: string,
   extension: 'csv' | 'parquet',
   at = new Date(),
 ): string {
-  const slug =
-    dataset
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9_-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 64) || 'export';
-  const iso = at.toISOString();
-  const stamp = `${iso.slice(0, 10).replaceAll('-', '')}T${iso.slice(11, 16).replace(':', '')}Z`;
-  return `shriii_${slug}_${stamp}.${extension}`;
+  return dataFileName({
+    entity: 'Dataset',
+    at,
+    time: true,
+    subject: dataset,
+    what: 'Export',
+    ext: extension,
+  });
 }

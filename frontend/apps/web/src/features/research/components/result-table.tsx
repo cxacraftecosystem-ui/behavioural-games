@@ -128,6 +128,7 @@ export function ResultTable<T>({
         </Table>
       </div>
       {pageSize && rows.length > pageSize && (
+        // a pager, not an action row
         <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
           <span>
             {current * pageSize + 1}–{Math.min(rows.length, (current + 1) * pageSize)} of{' '}

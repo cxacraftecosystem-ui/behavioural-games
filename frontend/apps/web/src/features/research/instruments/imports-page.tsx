@@ -14,6 +14,7 @@ import { Can } from '@/components/auth/can';
 import { PageHeader, Section } from '@/components/data/page-header';
 import { EmptyState, ErrorState, LoadingState } from '@/components/data/states';
 import { StatusBadge } from '@/components/data/status-badge';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -94,7 +95,7 @@ export function ImportsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Import questionnaire data"
-        description="CSV or XLSX (ODK exports included). Map columns to registry item ids, pre-check, then stage: the API validates every row and sends ambiguous rows to manual review before anything is committed."
+        description="CSV or XLSX, ODK exports included. Ambiguous rows go to review before anything is committed."
         meta={
           <Link
             href="/research/instruments"
@@ -206,10 +207,7 @@ function ImportWizard({ onStaged }: { readonly onStaged: (id: string) => void })
 
   return (
     <div className="space-y-6">
-      <Section
-        title="1 · Administration context"
-        description="Every imported row is stored with this study, occasion, instrument version, language version and form."
-      >
+      <Section title="1 · Administration context" description="Stored with every imported row.">
         <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field id="imp-study" label="Study">
             <StudySelect value={study?.study_id ?? null} studies={studies} onChange={setStudyId} />
@@ -298,7 +296,7 @@ function ImportWizard({ onStaged }: { readonly onStaged: (id: string) => void })
 
       <Section
         title="2 · File"
-        description="CSV files are previewed and checked here; XLSX files are parsed by the server, so map their column names by hand."
+        description="CSV is previewed here; for XLSX, map column names by hand."
       >
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed bg-card p-4">
           <FileSpreadsheetIcon className="size-5 text-muted-foreground" aria-hidden="true" />
@@ -324,7 +322,7 @@ function ImportWizard({ onStaged }: { readonly onStaged: (id: string) => void })
       {plan && file && (
         <Section
           title="3 · Column mapping"
-          description={`${plan.items.length} response ids for ${plan.instrumentId} v${plan.version}${plan.plannedMissing.length ? ` (${plan.plannedMissing.length} planned missing for form ${block})` : ''}. Suggestions match item ids and item numbers (Q3, item3, i03).`}
+          description={`${plan.items.length} response ids for ${plan.instrumentId} v${plan.version}${plan.plannedMissing.length ? ` (${plan.plannedMissing.length} planned missing for form ${block})` : ''}.`}
         >
           <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <ResultTable
@@ -426,7 +424,7 @@ function ImportWizard({ onStaged }: { readonly onStaged: (id: string) => void })
                   )
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    XLSX: values are checked by the server when the file is staged.
+                    XLSX values are checked when the file is staged.
                   </p>
                 )}
               </div>
@@ -468,7 +466,7 @@ function ImportWizard({ onStaged }: { readonly onStaged: (id: string) => void })
               <li key={r.id}>
                 <button
                   type="button"
-                  className="text-primary hover:underline"
+                  className="text-accent-foreground hover:underline"
                   onClick={() => onStaged(r.id)}
                 >
                   {r.filename}
@@ -586,20 +584,20 @@ function ReviewQueue({ importId }: { readonly importId: string }) {
           </div>
           {open && (
             <Can all={['imports.write']}>
-              <div className="flex flex-wrap gap-2">
+              <ActionGroup align="start">
                 <Button size="sm" onClick={() => commit.mutate()} disabled={commit.isPending}>
                   <CheckIcon aria-hidden="true" /> Commit {formatInteger(Number(counts.ready ?? 0))}{' '}
                   ready rows
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="destructive"
                   onClick={() => cancel.mutate()}
                   disabled={cancel.isPending}
                 >
                   <XIcon aria-hidden="true" /> Cancel import
                 </Button>
-              </div>
+              </ActionGroup>
             </Can>
           )}
           {b.status === 'committed' && (
@@ -608,8 +606,7 @@ function ReviewQueue({ importId }: { readonly importId: string }) {
                 Committed {b.committed_at ? formatDateTime(b.committed_at) : ''}
               </AlertTitle>
               <AlertDescription>
-                Responses were stored with source "import" and scored; corrections later create
-                superseding rows with an audit trail.
+                Responses are stored and scored. Later corrections keep an audit trail.
               </AlertDescription>
             </Alert>
           )}
@@ -617,7 +614,7 @@ function ReviewQueue({ importId }: { readonly importId: string }) {
       </div>
       <Section
         title="Manual review queue"
-        description="Ambiguous rows: unknown or missing pid, out-of-range values, duplicates. Approve (optionally correcting the pid) or reject each one."
+        description="Unknown pids, out-of-range values and duplicates. Approve or reject each."
         actions={
           <Select value={filter} onValueChange={(v) => setFilter(v as 'review' | 'all')}>
             <SelectTrigger size="sm" aria-label="Rows shown" className="w-40">
@@ -721,22 +718,24 @@ function ReviewQueue({ importId }: { readonly importId: string }) {
                           value={fixPid[r.row_number] ?? ''}
                           onChange={(e) => setFixPid({ ...fixPid, [r.row_number]: e.target.value })}
                         />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => resolve.mutate({ row: r, action: 'approve' })}
-                          disabled={resolve.isPending}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => resolve.mutate({ row: r, action: 'reject' })}
-                          disabled={resolve.isPending}
-                        >
-                          Reject
-                        </Button>
+                        <ActionGroup inline align="start">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => resolve.mutate({ row: r, action: 'approve' })}
+                            disabled={resolve.isPending}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => resolve.mutate({ row: r, action: 'reject' })}
+                            disabled={resolve.isPending}
+                          >
+                            Reject
+                          </Button>
+                        </ActionGroup>
                       </div>
                     </Can>
                   ) : (

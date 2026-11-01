@@ -91,7 +91,7 @@ export function ModelsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Models"
-        description="Does the game predict criterion scores and outcomes, and does it add anything over the questionnaire battery? Splits are grouped by participant (no leakage) and a cohort is held out untouched for final confirmation."
+        description="Does the game predict criterion scores beyond the battery? Splits are grouped by participant; one cohort is held out."
       />
       {sel.bar}
       {sel.blocker ?? (
@@ -140,7 +140,7 @@ export function ModelsPage() {
               </div>
               <Section
                 title="Four-way predictive comparison"
-                description="Cross-validated R² with bootstrap 95% CIs per comparison and model. Negative R² means worse than predicting the mean."
+                description="Cross-validated R² with bootstrap 95% CIs. Below 0 is worse than the mean."
               >
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                   <BarCiChart
@@ -318,7 +318,7 @@ export function ModelsPage() {
                 </Section>
                 <Section
                   title="Incremental validity"
-                  description="Hierarchical regression on complete cases: battery block first, then the game block (participant-clustered bootstrap CI)."
+                  description="Battery block first, then the game block. Complete cases, clustered bootstrap CI."
                 >
                   <ResultTable
                     exportName="hierarchical-delta-r2"
@@ -427,7 +427,7 @@ function Experiments({
   return (
     <Section
       title="Experiments"
-      description="Registered model versions on this snapshot: each one trains with participant-grouped nested CV and is scored once on its holdout cohort."
+      description="Each is scored once on its holdout cohort."
       actions={
         snapshotId && (
           <Can all={['models.write']}>
@@ -577,7 +577,7 @@ function ModelDetail({
     <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <ScatterRegressionChart
         title={`Observed vs predicted · ${model.name}`}
-        description="Out-of-fold predictions for training participants and one-shot holdout predictions (research ids only)."
+        description="Out-of-fold for training participants, one-shot for the holdout."
         data={{
           points,
           xLabel: `Predicted ${columnLabel(model.target)}`,
@@ -705,7 +705,7 @@ function RegisterModel({
         }),
       ),
     onSuccess: async () => {
-      toast.success('Model registered; training queued.');
+      toast.success('Model registered. Training queued.');
       await qc.invalidateQueries({ queryKey: researchKeys.models(snapshotId) });
     },
     onError: (e) => toast.error(errorMessage(e)),

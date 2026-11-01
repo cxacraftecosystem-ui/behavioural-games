@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from shriii_api.api.schemas import ERROR_RESPONSES
 from shriii_api.api.v1 import (
     admin,
+    admin_content,
     assessment,
     auth,
     events,
@@ -38,6 +39,7 @@ for module in (
     reports,
     studies,
     admin,
+    admin_content,
 ):
     api_router.include_router(module.router)
 

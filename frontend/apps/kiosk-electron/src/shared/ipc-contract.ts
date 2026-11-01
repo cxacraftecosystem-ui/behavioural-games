@@ -60,6 +60,8 @@ export interface KioskInfo {
   readonly platform: 'electron';
   readonly appVersion: string;
   readonly kioskId: string;
+  /** Device token for the renderer's API calls (uploads, remote commands); null when unprovisioned. */
+  readonly deviceToken: string | null;
   readonly updateChannel: string | null;
   readonly encryption: 'sealed' | 'none_dev' | 'unavailable';
   readonly printer: string;

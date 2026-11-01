@@ -409,7 +409,8 @@ export interface paths {
         /** Versions of a game */
         get: operations["game_versions_api_v1_games__game_id__versions_get"];
         put?: never;
-        post?: never;
+        /** Save an edited config as a new draft version (validated; locked fields refused) */
+        post: operations["create_draft_version_api_v1_games__game_id__versions_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1776,6 +1777,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/kiosks/{kiosk_id}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Remote commands of a kiosk */
+        get: operations["list_kiosk_commands_api_v1_admin_kiosks__kiosk_id__commands_get"];
+        put?: never;
+        /** Queue a signed remote command for a kiosk (idempotent per key) */
+        post: operations["create_kiosk_command_api_v1_admin_kiosks__kiosk_id__commands_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kiosks/{kiosk_id}/commands/{command_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a command the kiosk has not acted on */
+        post: operations["cancel_kiosk_command_api_v1_admin_kiosks__kiosk_id__commands__command_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kiosk-device/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Signed commands waiting for this kiosk (device token) */
+        get: operations["device_commands_api_v1_admin_kiosk_device_commands_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kiosk-device/commands/{command_id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report the outcome of a command (device token; idempotent) */
+        post: operations["ack_device_command_api_v1_admin_kiosk_device_commands__command_id__ack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/deployments": {
         parameters: {
             query?: never;
@@ -1998,6 +2068,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff accounts with roles and study scopes */
+        get: operations["list_users_api_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{sub}/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set a staff account's roles and study scope (applies at its next sign-in) */
+        put: operations["put_user_grants_api_v1_admin_users__sub__grants_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/policies/{policy_version}/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign the approved deployment policy (two-person approval and PRV-01 combinations re-checked) */
+        post: operations["sign_policy_api_v1_admin_policies__policy_version__sign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/audit": {
         parameters: {
             query?: never;
@@ -2186,6 +2307,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/retention/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The retention rules the server applies */
+        get: operations["retention_policy_api_v1_admin_retention_policy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/retention/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Retention runs, newest first */
+        get: operations["retention_runs_api_v1_admin_retention_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/legal-holds": {
         parameters: {
             query?: never;
@@ -2193,9 +2348,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Legal holds (active first) */
+        get: operations["list_holds_api_v1_admin_legal_holds_get"];
         put?: never;
-        /** Place a legal hold (blocks purge and erasure) */
+        /** Place a legal hold (blocks purge, erasure and kiosk wipes) */
         post: operations["create_hold_api_v1_admin_legal_holds_post"];
         delete?: never;
         options?: never;
@@ -2231,6 +2387,58 @@ export interface paths {
         get: operations["erasure_requests_api_v1_admin_erasure_requests_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Voice lines with current ITC status per language */
+        get: operations["content_lines_api_v1_admin_content_lines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/lines/{line_id}/languages/{language}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record an ITC sign-off for one line and language (workflow rules enforced) */
+        post: operations["create_line_transition_api_v1_admin_content_lines__line_id__languages__language__transitions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/content/audio/{line_id}/{language}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recording takes, newest first */
+        get: operations["list_audio_takes_api_v1_admin_content_audio__line_id___language__get"];
+        put?: never;
+        /** Upload a recording take (the server re-measures duration, peak and RMS of PCM WAV) */
+        post: operations["upload_audio_take_api_v1_admin_content_audio__line_id___language__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2350,6 +2558,41 @@ export interface components {
             /** Description */
             description?: string | null;
         };
+        /** AudioTakeOut */
+        AudioTakeOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Line Id */
+            line_id: string;
+            /** Language */
+            language: string;
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Sha256 */
+            sha256: string;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Peak Dbfs */
+            peak_dbfs: number | null;
+            /** Rms Dbfs */
+            rms_dbfs: number | null;
+            /** Status */
+            status: string;
+            /** Uploaded By */
+            uploaded_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** AuditOut */
         AuditOut: {
             /** Id */
@@ -2466,6 +2709,14 @@ export interface components {
              * @description ImportSpec as JSON
              */
             spec: string;
+        };
+        /** Body_upload_audio_take_api_v1_admin_content_audio__line_id___language__post */
+        Body_upload_audio_take_api_v1_admin_content_audio__line_id___language__post: {
+            /**
+             * File
+             * @description WAV (PCM) or Ogg/Opus, at most 10 MB
+             */
+            file: string;
         };
         /** CohortIn */
         CohortIn: {
@@ -2613,6 +2864,34 @@ export interface components {
             study_id?: string | null;
             /** Purge After */
             purge_after?: string | null;
+        };
+        /** ContentLineOut */
+        ContentLineOut: {
+            /** Line Id */
+            line_id: string;
+            /** Category */
+            category: string | null;
+            /** Module Id */
+            module_id: string | null;
+            /** Voice Forbidden */
+            voice_forbidden: boolean;
+            /** Target Duration Ms */
+            target_duration_ms: number | null;
+            /** Languages */
+            languages: {
+                [key: string]: components["schemas"]["LineLanguageState"];
+            };
+        };
+        /** ContentLinesOut */
+        ContentLinesOut: {
+            /** Catalogue Version */
+            catalogue_version: string;
+            /** Reference Language */
+            reference_language: string;
+            /** Languages */
+            languages: string[];
+            /** Lines */
+            lines: components["schemas"]["ContentLineOut"][];
         };
         /** ContentVersionOut */
         ContentVersionOut: {
@@ -3012,6 +3291,21 @@ export interface components {
         FreezeIn: {
             /** Reason */
             reason: string;
+        };
+        /** GameDraftIn */
+        GameDraftIn: {
+            /**
+             * Version
+             * @description Semantic version
+             */
+            version: string;
+            /**
+             * Config
+             * @description Full game config (game-config contract)
+             */
+            config: {
+                [key: string]: unknown;
+            };
         };
         /** GameOut */
         GameOut: {
@@ -3479,6 +3773,109 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** KioskCommandAck */
+        KioskCommandAck: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "acknowledged" | "failed";
+            /**
+             * Result
+             * @description Scrubbed counters only, never participant data
+             */
+            result?: {
+                [key: string]: unknown;
+            };
+            /** Error */
+            error?: string | null;
+        };
+        /** KioskCommandEnvelope */
+        KioskCommandEnvelope: {
+            /**
+             * Command Id
+             * Format: uuid
+             */
+            command_id: string;
+            /** Kiosk Id */
+            kiosk_id: string;
+            /** Command */
+            command: string;
+            /**
+             * Issued At
+             * @description Exactly the signed string (YYYY-MM-DDTHH:MM:SSZ)
+             */
+            issued_at: string;
+            /**
+             * Expires At
+             * @description Exactly the signed string (YYYY-MM-DDTHH:MM:SSZ)
+             */
+            expires_at: string;
+            /** Nonce */
+            nonce: string;
+            /**
+             * Signature
+             * @description Base64 Ed25519 over the RFC 8785 JSON of the other envelope fields
+             */
+            signature: string;
+            /** Key Id */
+            key_id: string;
+        };
+        /** KioskCommandIn */
+        KioskCommandIn: {
+            /**
+             * Command
+             * @enum {string}
+             */
+            command: "lock" | "unlock" | "restart" | "sync" | "pull_logs" | "wipe";
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Confirm Kiosk Id
+             * @description Must repeat the kiosk id for a wipe
+             */
+            confirm_kiosk_id?: string | null;
+        };
+        /** KioskCommandOut */
+        KioskCommandOut: {
+            /**
+             * Command Id
+             * Format: uuid
+             */
+            command_id: string;
+            /** Kiosk Id */
+            kiosk_id: string;
+            /** Command */
+            command: string;
+            /** Status */
+            status: string;
+            /** Reason */
+            reason: string | null;
+            /** Issued By */
+            issued_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Delivered At */
+            delivered_at: string | null;
+            /** Acknowledged At */
+            acknowledged_at: string | null;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+            /** Error */
+            error: string | null;
+        };
         /** KioskCreate */
         KioskCreate: {
             /** Kiosk Id */
@@ -3571,6 +3968,26 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** LegalHoldOut */
+        LegalHoldOut: {
+            /** Id */
+            id: number;
+            /** Scope Kind */
+            scope_kind: string;
+            /** Scope Value */
+            scope_value: string;
+            /** Reason */
+            reason: string;
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Released At */
+            released_at: string | null;
+        };
         /** LicensingUpdate */
         LicensingUpdate: {
             /** Holder */
@@ -3597,6 +4014,68 @@ export interface components {
             notes?: string | null;
             /** Language */
             language?: string | null;
+        };
+        /** LineLanguageState */
+        LineLanguageState: {
+            /** Status */
+            status: string;
+            /** Recording Status */
+            recording_status: string | null;
+            /** History */
+            history: components["schemas"]["LineTransitionOut"][];
+            /** Takes */
+            takes: number;
+        };
+        /** LineTransitionIn */
+        LineTransitionIn: {
+            /** To Status */
+            to_status: string;
+            /** Role */
+            role: string;
+            /**
+             * Signer
+             * @description Full name of the person signing off
+             */
+            signer: string;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+        };
+        /** LineTransitionOut */
+        LineTransitionOut: {
+            /**
+             * Id
+             * @description Null for sign-offs recorded in the repository files
+             */
+            id?: number | null;
+            /** Line Id */
+            line_id: string;
+            /** Language */
+            language: string;
+            /** From Status */
+            from_status: string;
+            /** To Status */
+            to_status: string;
+            /** Role */
+            role: string;
+            /** Signer */
+            signer: string;
+            /** Comment */
+            comment: string;
+            /**
+             * Source
+             * @description 'api' for console sign-offs, else the repository source (e.g. xlsx:<file>)
+             */
+            source: string;
+            /** Recorded By */
+            recorded_by?: string | null;
+            /**
+             * Created At
+             * @description ISO-8601 time (API) or date (repository)
+             */
+            created_at: string;
         };
         /** LinkCreate */
         LinkCreate: {
@@ -4041,6 +4520,26 @@ export interface components {
              */
             created_at: string;
         };
+        /** PolicySignatureOut */
+        PolicySignatureOut: {
+            /** Policy Version */
+            policy_version: string;
+            /** Sha256 */
+            sha256: string;
+            /** Signature */
+            signature: string;
+            /** Key Id */
+            key_id: string;
+            /** Algorithm */
+            algorithm: string;
+            /** Signed By */
+            signed_by: string;
+            /**
+             * Signed At
+             * Format: date-time
+             */
+            signed_at: string;
+        };
         /** ProtocolIn */
         ProtocolIn: {
             /** Version */
@@ -4377,6 +4876,55 @@ export interface components {
              * @default true
              */
             dry_run: boolean;
+        };
+        /** RetentionPolicyOut */
+        RetentionPolicyOut: {
+            /** Version */
+            version: string;
+            /** Sha256 */
+            sha256: string;
+            /** Rules */
+            rules: components["schemas"]["RetentionRuleOut"][];
+        };
+        /** RetentionRuleOut */
+        RetentionRuleOut: {
+            /** Id */
+            id: string;
+            /** Data Class */
+            data_class: string | null;
+            /** Description */
+            description: string | null;
+            /** Ttl Days */
+            ttl_days: number | null;
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** RetentionRunOut */
+        RetentionRunOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Policy Sha256 */
+            policy_sha256: string;
+            /** Report */
+            report: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status: string;
+            /** Triggered By */
+            triggered_by: string;
         };
         /** RetestCompleteIn */
         RetestCompleteIn: {
@@ -5037,6 +5585,42 @@ export interface components {
             retryable: number;
         } & {
             [key: string]: unknown;
+        };
+        /** UserGrantsIn */
+        UserGrantsIn: {
+            /** Roles */
+            roles: ("admin" | "researcher" | "administrator" | "analyst")[];
+            /**
+             * Studies
+             * @description Study ids; ["*"] = every study
+             */
+            studies?: string[];
+            /** Disabled */
+            disabled?: boolean | null;
+        };
+        /** UserOut */
+        UserOut: {
+            /** Username */
+            username: string;
+            /** Roles */
+            roles: string[];
+            /** Studies */
+            studies: string[];
+            /** Disabled */
+            disabled: boolean;
+            /** Locked Until */
+            locked_until: string | null;
+            /** Last Login At */
+            last_login_at: string | null;
+            /** Must Change Password */
+            must_change_password: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -9169,6 +9753,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameVersionOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_draft_version_api_v1_games__game_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GameDraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameVersionOut"];
                 };
             };
             /** @description Unauthenticated */
@@ -14027,6 +14664,249 @@ export interface operations {
             };
         };
     };
+    list_kiosk_commands_api_v1_admin_kiosks__kiosk_id__commands_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kiosk_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KioskCommandOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_kiosk_command_api_v1_admin_kiosks__kiosk_id__commands_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kiosk_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KioskCommandIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KioskCommandOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_kiosk_command_api_v1_admin_kiosks__kiosk_id__commands__command_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kiosk_id: string;
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KioskCommandOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    device_commands_api_v1_admin_kiosk_device_commands_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KioskCommandEnvelope"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ack_device_command_api_v1_admin_kiosk_device_commands__command_id__ack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                command_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KioskCommandAck"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KioskCommandOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_deployments_api_v1_admin_deployments_get: {
         parameters: {
             query?: {
@@ -14676,6 +15556,146 @@ export interface operations {
             };
         };
     };
+    list_users_api_v1_admin_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_user_grants_api_v1_admin_users__sub__grants_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserGrantsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_policy_api_v1_admin_policies__policy_version__sign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicySignatureOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     audit_log_api_v1_admin_audit_get: {
         parameters: {
             query?: {
@@ -15283,6 +16303,143 @@ export interface operations {
             };
         };
     };
+    retention_policy_api_v1_admin_retention_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPolicyOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retention_runs_api_v1_admin_retention_runs_get: {
+        parameters: {
+            query?: {
+                /** @description Page size */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionRunOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_holds_api_v1_admin_legal_holds_get: {
+        parameters: {
+            query?: {
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHoldOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_hold_api_v1_admin_legal_holds_post: {
         parameters: {
             query?: never;
@@ -15302,9 +16459,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["LegalHoldOut"];
                 };
             };
             /** @description Unauthenticated */
@@ -15408,6 +16563,202 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    content_lines_api_v1_admin_content_lines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentLinesOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_line_transition_api_v1_admin_content_lines__line_id__languages__language__transitions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineTransitionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineTransitionOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audio_takes_api_v1_admin_content_audio__line_id___language__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioTakeOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_audio_take_api_v1_admin_content_audio__line_id___language__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_audio_take_api_v1_admin_content_audio__line_id___language__post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioTakeOut"];
                 };
             };
             /** @description Unauthenticated */

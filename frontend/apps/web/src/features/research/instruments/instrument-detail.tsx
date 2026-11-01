@@ -102,7 +102,7 @@ export function InstrumentDetailPage({ instrumentId }: { readonly instrumentId: 
           </div>
         }
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <>
             {versions.data && versions.data.length > 1 && (
               <Select value={version ?? ''} onValueChange={setVersion}>
                 <SelectTrigger size="sm" aria-label="Version" className="w-36">
@@ -133,7 +133,7 @@ export function InstrumentDetailPage({ instrumentId }: { readonly instrumentId: 
                 </Link>
               </Button>
             </Can>
-          </div>
+          </>
         }
       />
       {(inst.licensing_warnings ?? []).length > 0 && (
@@ -158,7 +158,7 @@ export function InstrumentDetailPage({ instrumentId }: { readonly instrumentId: 
           <TabsContent value="items">
             <Section
               title={`${items.length} items`}
-              description="Registry structure only: copyrighted wording is not stored; each item carries a placeholder and the reference to its licensed source."
+              description="Structure only. Wording stays in the licensed source."
             >
               <ResultTable
                 exportName={`${instrumentId}-items`}
@@ -432,7 +432,7 @@ function LanguageVersions({
   return (
     <Section
       title="Language versions"
-      description="ITC translation workflow: forward and back translation, expert review, recording, audio QC, think-aloud, approval (two approvers)."
+      description="ITC steps per language. Approval needs two approvers."
       actions={
         <Can all={['instruments.write']}>
           <FormDialog
@@ -570,7 +570,7 @@ function LicensingPanel({
         }),
       ),
     onSuccess: async () => {
-      toast.success('Licensing update recorded (append-only).');
+      toast.success('Licensing update recorded.');
       await qc.invalidateQueries({ queryKey: researchKeys.licensing(instrumentId) });
       await qc.invalidateQueries({ queryKey: researchKeys.instruments() });
     },

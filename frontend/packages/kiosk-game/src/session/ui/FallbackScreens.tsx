@@ -3,6 +3,13 @@
  * language, consent, bands, report, survey, opt-in, farewell). They are deliberately plain: real
  * screens plug in through `KioskRuntimeView`'s `screens` prop. Every target is >= 20 mm (sized in
  * mm via the layout's px-per-mm) and there is no text or numeral anywhere.
+ *
+ * Kiosk rules (skill §20): the art kit's tokens, so a fallback reads like the real screen. Confirm is
+ * a teal CIRCLE with a tick, cancel a burnt-orange ROUNDED SQUARE with a cross (shape + icon + colour,
+ * never colour alone); confirm sits on the right, cancel on the left; the icon on every face keeps
+ * >= 4.5:1 against it (KSK-06); every control has an accessible name even though nothing is printed;
+ * attention pulses stop under reduced motion and leave a static ring; the walkaway countdown keeps
+ * running.
  */
 import type { LanguageTag, SessionState } from '@shriii/contracts';
 import {
@@ -12,6 +19,7 @@ import {
   type ReactNode,
   useState,
 } from 'react';
+import { KIOSK_PALETTE, MELA } from '../../art/palettes.ts';
 import type {
   KioskSessionView,
   SessionController,
@@ -31,14 +39,54 @@ export interface KioskScreenProps {
 
 export type ScreenMap = Partial<Record<SessionState, ComponentType<KioskScreenProps>>>;
 
-const COLORS = {
-  confirm: '#009e73',
-  cancel: '#d55e00',
-  accent: '#0072b2',
-  paper: '#fff8ec',
-  ink: '#1d1d1b',
+const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
+
+/** The art kit's contract tokens (art/palettes.ts KIOSK_PALETTE): one source for both renderers. */
+export const COLORS = {
+  confirm: hex(KIOSK_PALETTE.confirm),
+  cancel: hex(KIOSK_PALETTE.cancel),
+  accent: hex(MELA.lapis),
+  paper: hex(MELA.cream),
+  ink: hex(MELA.ink),
 };
-const LANGUAGE_COLORS = ['#0072b2', '#e69f00', '#009e73', '#cc79a7', '#56b4e9', '#d55e00'];
+/**
+ * Okabe-Ito, separable for every common colour-vision deficiency; order is the cue, never cycled. The
+ * sixth slot is Tol's wine instead of Okabe-Ito vermilion: vermilion carries neither the cream nor the
+ * dark icon at 4.5:1, and it reads as the cancel face.
+ */
+export const LANGUAGE_COLORS = ['#0072b2', '#e69f00', '#009e73', '#cc79a7', '#56b4e9', '#882255'];
+
+function luminance(color: string): number {
+  const n = Number.parseInt(color.slice(1), 16);
+  const lin = (c: number): number => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+}
+
+/** The language's own name for a screen reader (its autonym), or its position when unknown. */
+function languageName(lang: string, index: number): string {
+  try {
+    return new Intl.DisplayNames([lang], { type: 'language' }).of(lang) ?? `Language ${index + 1}`;
+  } catch {
+    return `Language ${index + 1}`;
+  }
+}
+
+/** Contrast ratio between two `#rrggbb` colours (WCAG 2). */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** Cream or dark ink, whichever contrasts more with the face (KSK-06 asks for >= 4.5:1). */
+export function iconInkFor(face: string): string {
+  return contrastRatio(COLORS.paper, face) >= contrastRatio(COLORS.ink, face)
+    ? COLORS.paper
+    : COLORS.ink;
+}
 
 const centre: CSSProperties = {
   position: 'absolute',
@@ -62,20 +110,28 @@ function BigButton(props: {
   readonly pxPerMm: number;
   readonly sizeMm?: number;
   readonly id: string;
+  /** Accessible name (never printed: the kiosk needs no reading). */
+  readonly label: string;
+  /** Confirm-like = circle, cancel-like = rounded square (shape is a cue, not decoration). */
+  readonly shape?: 'circle' | 'rounded';
+  /** For a toggle: its on/off state. */
+  readonly pressed?: boolean;
 }): ReactElement {
   const px = Math.round((props.sizeMm ?? 34) * props.pxPerMm);
   return (
     <button
       type="button"
       data-target={props.id}
+      aria-label={props.label}
+      {...(props.pressed === undefined ? {} : { 'aria-pressed': props.pressed })}
       onPointerUp={props.onTap}
       style={{
         width: px,
         height: px,
-        borderRadius: '50%',
+        borderRadius: props.shape === 'rounded' ? '28%' : '50%',
         border: `${Math.round(px * 0.05)}px solid ${COLORS.paper}`,
         background: props.color,
-        color: COLORS.paper,
+        color: iconInkFor(props.color),
         display: 'grid',
         placeItems: 'center',
         cursor: 'pointer',
@@ -91,15 +147,24 @@ function BigButton(props: {
 
 function Attract({ send }: KioskScreenProps): ReactElement {
   return (
-    <div
-      style={{ ...centre, justifyContent: 'center', cursor: 'pointer' }}
+    <button
+      type="button"
+      aria-label="Touch to start"
+      style={{
+        ...centre,
+        justifyContent: 'center',
+        cursor: 'pointer',
+        border: 0,
+        background: 'transparent',
+        padding: 0,
+      }}
       onPointerUp={() => send({ type: 'TOUCH_START' })}
       data-target="attract.touch"
     >
-      <div style={{ color: COLORS.paper, animation: 'shriii-pulse 2s ease-in-out infinite' }}>
+      <span className="shriii-pulse" style={{ color: COLORS.paper, display: 'grid' }}>
         <Icon name="hand" size={220} />
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }
 
@@ -111,6 +176,7 @@ function LanguageSelect({ view, send, pxPerMm }: KioskScreenProps): ReactElement
           <BigButton
             key={lang}
             id={`language.${lang}`}
+            label={languageName(lang, i)}
             icon="face_happy"
             color={LANGUAGE_COLORS[i % LANGUAGE_COLORS.length] ?? COLORS.accent}
             pxPerMm={pxPerMm}
@@ -128,6 +194,9 @@ function Consent({ send, pxPerMm }: KioskScreenProps): ReactElement {
     <div style={centre}>
       <BigButton
         id="consent.archive"
+        label="Keep my answers for research"
+        pressed={archive}
+        shape="rounded"
         icon={archive ? 'box_checked' : 'box'}
         color={COLORS.accent}
         sizeMm={24}
@@ -137,6 +206,8 @@ function Consent({ send, pxPerMm }: KioskScreenProps): ReactElement {
       <Row>
         <BigButton
           id="consent.decline"
+          label="No"
+          shape="rounded"
           icon="cross"
           color={COLORS.cancel}
           pxPerMm={pxPerMm}
@@ -144,6 +215,7 @@ function Consent({ send, pxPerMm }: KioskScreenProps): ReactElement {
         />
         <BigButton
           id="consent.grant"
+          label="Yes"
           icon="tick"
           color={COLORS.confirm}
           pxPerMm={pxPerMm}
@@ -160,6 +232,8 @@ function Bands({ send, pxPerMm }: KioskScreenProps): ReactElement {
       <Row>
         <BigButton
           id="bands.child"
+          label="Under 18"
+          shape="rounded"
           icon="child"
           color={COLORS.cancel}
           pxPerMm={pxPerMm}
@@ -167,6 +241,7 @@ function Bands({ send, pxPerMm }: KioskScreenProps): ReactElement {
         />
         <BigButton
           id="bands.adult"
+          label="18 or older"
           icon="adult"
           color={COLORS.confirm}
           pxPerMm={pxPerMm}
@@ -197,6 +272,7 @@ function Report({ send, pxPerMm }: KioskScreenProps): ReactElement {
       </div>
       <BigButton
         id="report.done"
+        label="Done"
         icon="tick"
         color={COLORS.confirm}
         pxPerMm={pxPerMm}
@@ -214,6 +290,8 @@ function Survey({ send, pxPerMm }: KioskScreenProps): ReactElement {
         <Row>
           <BigButton
             id="survey.sad"
+            label="Not fun"
+            shape="rounded"
             icon="face_sad"
             color={COLORS.cancel}
             pxPerMm={pxPerMm}
@@ -221,6 +299,7 @@ function Survey({ send, pxPerMm }: KioskScreenProps): ReactElement {
           />
           <BigButton
             id="survey.neutral"
+            label="Okay"
             icon="face_neutral"
             color={COLORS.accent}
             pxPerMm={pxPerMm}
@@ -228,6 +307,7 @@ function Survey({ send, pxPerMm }: KioskScreenProps): ReactElement {
           />
           <BigButton
             id="survey.happy"
+            label="Fun"
             icon="face_happy"
             color={COLORS.confirm}
             pxPerMm={pxPerMm}
@@ -242,6 +322,8 @@ function Survey({ send, pxPerMm }: KioskScreenProps): ReactElement {
       <Row>
         <BigButton
           id="survey.again_no"
+          label="Don't play again"
+          shape="rounded"
           icon="cross"
           color={COLORS.cancel}
           pxPerMm={pxPerMm}
@@ -249,6 +331,7 @@ function Survey({ send, pxPerMm }: KioskScreenProps): ReactElement {
         />
         <BigButton
           id="survey.again_yes"
+          label="Play again"
           icon="tick"
           color={COLORS.confirm}
           pxPerMm={pxPerMm}
@@ -266,6 +349,8 @@ function ContactOptIn({ send, pxPerMm }: KioskScreenProps): ReactElement {
       <Row>
         <BigButton
           id="optin.no"
+          label="Don't contact me"
+          shape="rounded"
           icon="cross"
           color={COLORS.cancel}
           pxPerMm={pxPerMm}
@@ -273,6 +358,7 @@ function ContactOptIn({ send, pxPerMm }: KioskScreenProps): ReactElement {
         />
         <BigButton
           id="optin.yes"
+          label="Contact me"
           icon="tick"
           color={COLORS.confirm}
           pxPerMm={pxPerMm}
@@ -316,6 +402,8 @@ export function ExitControl({
         <>
           <BigButton
             id="exit.delete"
+            label="Stop and delete my answers"
+            shape="rounded"
             icon="bin"
             color={COLORS.cancel}
             sizeMm={22}
@@ -324,6 +412,7 @@ export function ExitControl({
           />
           <BigButton
             id="exit.keep"
+            label="Stop and keep my answers"
             icon="keep"
             color={COLORS.confirm}
             sizeMm={22}
@@ -335,6 +424,8 @@ export function ExitControl({
       <button
         type="button"
         data-target="exit.hand"
+        aria-label="Stop"
+        aria-expanded={open}
         onPointerUp={() => setOpen((o) => !o)}
         style={{
           width: size,
@@ -374,7 +465,7 @@ export function WalkawayOverlay({
   if (stage === 'reprompt') {
     return (
       <div style={veil}>
-        <div style={{ animation: 'shriii-pulse 1s ease-in-out infinite' }}>
+        <div className="shriii-pulse shriii-pulse-fast" style={{ display: 'grid' }}>
           <Icon name="hand" size={160} />
         </div>
       </div>
@@ -407,6 +498,7 @@ export function WalkawayOverlay({
               stroke="currentColor"
               strokeWidth="6"
               strokeDasharray="289"
+              data-motion="essential"
               style={{ animation: 'shriii-ring 10s linear forwards' }}
             />
           </svg>
@@ -417,8 +509,19 @@ export function WalkawayOverlay({
   );
 }
 
-/** Keyframes used by the fallback shell (no flashing above 3 Hz). */
+/**
+ * Styles for the fallback shell. Pulses stay at or under 1 Hz (no flashing above 3 Hz). Under reduced
+ * motion a pulse is replaced by a static cream ring, because a signal that exists only as motion is a
+ * signal that reader never gets. The countdown ring is information (time left), not decoration, so it
+ * is marked data-motion="essential" and keeps running.
+ */
 export const FALLBACK_CSS = `
 @keyframes shriii-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 @keyframes shriii-ring { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 289; } }
+.shriii-pulse { border-radius: 50%; animation: shriii-pulse 2s ease-in-out infinite; }
+.shriii-pulse-fast { animation-duration: 1s; }
+[data-target]:focus-visible { outline: 6px solid ${COLORS.paper}; outline-offset: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .shriii-pulse { animation: none; box-shadow: 0 0 0 10px ${COLORS.paper}99; }
+}
 `;

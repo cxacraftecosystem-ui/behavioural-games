@@ -38,7 +38,7 @@ function StackedBar({
     <div
       role="img"
       aria-label={`${label}: ${shown.map((s) => `${s.label} ${s.count}`).join(', ')}`}
-      className="flex h-3 w-full gap-[2px] overflow-hidden rounded-[4px] bg-muted"
+      className="flex h-3 w-full gap-[2px] overflow-hidden rounded-[4px] bg-progress-track"
     >
       {shown.map((s) => (
         <Tooltip key={s.key}>

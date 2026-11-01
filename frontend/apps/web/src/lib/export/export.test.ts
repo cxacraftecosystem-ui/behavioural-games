@@ -125,7 +125,7 @@ describe('governance', () => {
     });
     expect(record).toMatchObject({
       rowCount: 3,
-      fileName: 'shriii_validation-runs_20261021T0905Z.parquet',
+      fileName: 'BehaviouralGames_Dataset_2026-10-21_1435_Validation-Runs_Export.parquet',
       actor: 'dev-researcher',
       studyId: 'S1',
     });
@@ -134,7 +134,7 @@ describe('governance', () => {
 
   it('slugs file names', () => {
     expect(exportFileName('  ### ', 'csv', new Date('2026-01-02T03:04:00Z'))).toBe(
-      'shriii_export_20260102T0304Z.csv',
+      'BehaviouralGames_Dataset_2026-01-02_0834_Export.csv',
     );
   });
 

@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { ALL_STUDIES, isUserRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/lib/auth/permissions';
 import { isAdmin } from '@/lib/auth/principal';
 import { cn } from '@/lib/utils';
-import { KeyValues, NeedsApi } from '../shared/components';
+import { KeyValues } from '../shared/components';
 import {
   MATRIX_ROLES,
   type MatrixRole,
@@ -25,6 +25,7 @@ import {
   ROLE_PERMISSIONS,
   SENSITIVE,
 } from './rbac-matrix';
+import { UsersPanel } from './users-panel';
 
 const ROLE_HEAD: Record<MatrixRole, string> = {
   admin: 'Admin',
@@ -47,10 +48,6 @@ export function RolesPanel() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">Signed in as</CardTitle>
-            <CardDescription>
-              Roles and study scope come from the identity token; the API enforces them on every
-              request.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <KeyValues
@@ -80,16 +77,11 @@ export function RolesPanel() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-sm">Study-scoped access</CardTitle>
-            <CardDescription>How permissions combine with study scope (PRV-08)</CardDescription>
+            <CardDescription>
+              Roles grant permissions; study scope limits where they apply.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>
-              A user's permissions come from their roles. Every study-bound request is also checked
-              against the user's study scope: admins and{' '}
-              <code className="font-mono text-xs">*</code> scopes reach every study, everyone else
-              only the studies listed in their token. Field administrators run sessions and the
-              battery but never see scores; analysts see de-identified layers only.
-            </p>
             <ul className="grid gap-1 sm:grid-cols-2">
               {MATRIX_ROLES.filter(isUserRole).map((r) => (
                 <li key={r} className="text-xs text-muted-foreground">
@@ -102,16 +94,11 @@ export function RolesPanel() {
         </Card>
       </div>
 
-      <Section title="Users and grants" description="Assigning roles and study scopes to people">
-        <div className="grid gap-2 md:grid-cols-2">
-          <NeedsApi endpoint="users" />
-          <NeedsApi endpoint="userGrants" />
-        </div>
-      </Section>
+      <UsersPanel />
 
       <Section
         title="Permission matrix"
-        description="Read-only mirror of the API's RBAC (backend/api rbac.py, parity-tested). Marked rows touch identifiable or score-bearing data."
+        description="The eye marks identifiable or score-bearing data."
       >
         <div className="overflow-x-auto rounded-md border">
           <Table>

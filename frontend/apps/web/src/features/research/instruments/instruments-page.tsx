@@ -32,7 +32,7 @@ export function InstrumentsPage() {
   const sync = useMutation({
     mutationFn: () => unwrap(api.POST('/api/v1/instruments/sync')),
     onSuccess: async () => {
-      toast.success('Registry synchronised from content/instruments.');
+      toast.success('Registry synced.');
       await qc.invalidateQueries({ queryKey: researchKeys.instruments() });
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -43,9 +43,9 @@ export function InstrumentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Instruments"
-        description="The criterion battery: registry with licensing metadata, versions, items and scoring keys, CSV/XLSX import with column mapping and manual review, and researcher-administered tablet mode. Administered in supervised pilots only, never on the public kiosk."
+        description="The criterion battery. Supervised pilots only, never on the public kiosk."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <>
             <Can all={['imports.write']}>
               <Button asChild size="sm" variant="outline">
                 <Link href="/research/instruments/imports">
@@ -63,7 +63,7 @@ export function InstrumentsPage() {
                 <RefreshCwIcon aria-hidden="true" /> Sync registry
               </Button>
             </Can>
-          </div>
+          </>
         }
       />
       <div className="grid gap-3 sm:grid-cols-3">
@@ -78,18 +78,13 @@ export function InstrumentsPage() {
           value={rows.length - blocked.length}
           sub="granted or not required"
         />
-        <StatTile
-          label="Awaiting permission"
-          value={blocked.length}
-          sub="administration blocked by the API"
-        />
+        <StatTile label="Awaiting permission" value={blocked.length} sub="blocked until licensed" />
       </div>
       {blocked.length > 0 && (
         <Alert variant="warning">
           <AlertTitle>Licensing open for {blocked.length} instrument(s)</AlertTitle>
           <AlertDescription>
-            Item wording is never stored in the registry; it is loaded at administration time from
-            the licensed source file. Administration is refused until permission is recorded.
+            Administration is refused until permission is recorded.
           </AlertDescription>
         </Alert>
       )}

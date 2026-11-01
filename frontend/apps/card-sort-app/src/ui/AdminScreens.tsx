@@ -45,10 +45,7 @@ export function PinForm({
     <form className="panel narrow" onSubmit={submit} data-testid={`pin-${mode}`}>
       <h1>{mode === 'set' ? 'Set administrator PIN' : 'Administrator PIN'}</h1>
       {mode === 'set' && (
-        <p className="muted">
-          This tablet runs the supervised criterion card sort. Only trained administrators may
-          operate it. Choose a 6-12 digit PIN.
-        </p>
+        <p className="muted">For trained administrators only. Choose a 6–12 digit PIN.</p>
       )}
       <label>
         PIN
@@ -75,15 +72,15 @@ export function PinForm({
         </label>
       )}
       {(local ?? error) && <p className="error">{local ?? error}</p>}
-      <div className="row">
-        <button type="submit" className="btn primary">
-          {mode === 'set' ? 'Save PIN' : 'Unlock'}
-        </button>
+      <div className="actions">
         {onCancel && (
           <button type="button" className="btn secondary" onClick={onCancel}>
             Cancel
           </button>
         )}
+        <button type="submit" className="btn primary">
+          {mode === 'set' ? 'Save PIN' : 'Unlock'}
+        </button>
       </div>
     </form>
   );
@@ -176,15 +173,15 @@ export function SettingsForm({
         </label>
       </div>
       {error && <p className="error">{error}</p>}
-      <div className="row">
-        <button type="submit" className="btn primary">
-          Save settings
-        </button>
+      <div className="actions">
         {onCancel && (
           <button type="button" className="btn secondary" onClick={onCancel}>
             Cancel
           </button>
         )}
+        <button type="submit" className="btn primary">
+          Save settings
+        </button>
       </div>
     </form>
   );
@@ -239,7 +236,7 @@ export function HomeScreen({
         Administrator <b>{settings.administratorId}</b> · device <b>{settings.deviceId}</b> ·
         storage {backend} · {online ? 'online' : 'offline'}
       </p>
-      <div className="row">
+      <div className="actions">
         <button
           type="button"
           className="btn primary big"
@@ -271,9 +268,11 @@ export function HomeScreen({
           {pending.length} pending · {rejected.length} need attention · {synced.length} synced
         </p>
         {!settings.apiBaseUrl && (
-          <p className="warn">No API URL configured: records stay on this tablet.</p>
+          <p className="warn">
+            Records stay on this tablet until a sync address is set in Settings.
+          </p>
         )}
-        <div className="row">
+        <div className="actions">
           <button
             type="button"
             className="btn secondary"
@@ -466,12 +465,12 @@ export function StartForm({
           ))}
         </ul>
       )}
-      <div className="row">
-        <button type="submit" className="btn primary" data-testid="start-submit">
-          Continue to instructions
-        </button>
+      <div className="actions">
         <button type="button" className="btn secondary" onClick={onCancel}>
           Cancel
+        </button>
+        <button type="submit" className="btn primary" data-testid="start-submit">
+          Continue to instructions
         </button>
       </div>
     </form>
@@ -500,8 +499,8 @@ export function InstructionsScreen({
     <div className="panel" data-testid="instructions">
       <h1>Instructions</h1>
       <p className="muted">
-        Participant {session.pid} · {session.language} · {session.protocol.deckSize} cards. Seat the
-        participant and show the four cards below.
+        Participant {session.pid} · {session.language} · {session.protocol.deckSize} cards. Show the
+        four cards below.
       </p>
       <div className="keys small">
         {KEY_CARDS.map((c) => (
@@ -510,18 +509,21 @@ export function InstructionsScreen({
           </div>
         ))}
       </div>
-      <div className="row">
+      <div className="actions">
         <button type="button" className="btn secondary" onClick={() => void play()}>
           Play spoken instructions
         </button>
       </div>
       {missing && (
         <p className="warn">
-          No recording for {session.language} yet. {ADMIN_SCRIPT.instructions}
+          No recording for {session.language} — read this aloud: {ADMIN_SCRIPT.instructions}
         </p>
       )}
       {!missing && <p className="muted small-text">{ADMIN_SCRIPT.instructions}</p>}
-      <div className="row">
+      <div className="actions">
+        <button type="button" className="btn secondary big" onClick={onCancel}>
+          Cancel administration
+        </button>
         <button
           type="button"
           className="btn primary big"
@@ -529,9 +531,6 @@ export function InstructionsScreen({
           data-testid="begin-test"
         >
           Hand over and begin
-        </button>
-        <button type="button" className="btn secondary" onClick={onCancel}>
-          Cancel administration
         </button>
       </div>
     </div>
@@ -549,8 +548,8 @@ export function SummaryScreen({ session, onDone }: { session: SessionRecord; onD
       </p>
       <p className="muted">
         {session.status === 'completed'
-          ? 'Records are saved on this tablet and queued for sync. Scores are computed by the research server and are not shown here.'
-          : `Stopped: ${session.abortReason ?? 'unknown reason'}. Partial administrations are kept on this tablet and are not synced.`}
+          ? 'Saved and queued for sync.'
+          : `Stopped: ${session.abortReason ?? 'no reason given'}. Kept on this tablet, not synced.`}
       </p>
       <button type="button" className="btn primary" onClick={onDone} data-testid="summary-done">
         Done
@@ -590,7 +589,7 @@ export function AbortPanel({
           ))}
         </select>
       </label>
-      <div className="row">
+      <div className="actions">
         <button type="button" className="btn primary" onClick={onResume}>
           Continue the test
         </button>

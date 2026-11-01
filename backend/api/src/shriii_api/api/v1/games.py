@@ -13,7 +13,9 @@ from shriii_api import content
 from shriii_api.api.deps import DbSession, raise_error, require, set_audit
 from shriii_api.api.schemas import ApiModel
 from shriii_api.auth.rbac import Perm, Principal
+from shriii_api.canonical import canonical_sha256
 from shriii_api.db.models.games import Game, GameVersion, TrialDefinition
+from shriii_api.services import game_drafts
 from shriii_api.services.content_sync import sync_games
 
 router = APIRouter(prefix="/games", tags=["games"])
@@ -110,6 +112,72 @@ def game_versions(
     game_id: str, db: DbSession, principal: Annotated[Principal, Depends(require(Perm.GAMES_READ))]
 ) -> list[GameVersionOut]:
     return [GameVersionOut.model_validate(v) for v in _versions(db, game_id)]
+
+
+class GameDraftIn(BaseModel):
+    version: str = Field(pattern=r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$", description="Semantic version")
+    config: dict[str, Any] = Field(description="Full game config (game-config contract)")
+
+
+@router.post(
+    "/{game_id}/versions",
+    response_model=GameVersionOut,
+    status_code=201,
+    summary="Save an edited config as a new draft version (validated; locked fields refused)",
+)
+def create_draft_version(
+    game_id: str,
+    body: GameDraftIn,
+    request: Request,
+    db: DbSession,
+    principal: Annotated[Principal, Depends(require(Perm.GAMES_WRITE))],
+) -> GameVersionOut:
+    if db.get(Game, game_id) is None:
+        raise_error(404, "unknown_game", "game not found")
+    config = dict(body.config)
+    if config.get("module_id") != game_id:
+        raise_error(422, "invalid_config", "config.module_id must equal the game id")
+    if config.get("version") not in (None, body.version):
+        raise_error(422, "invalid_config", "config.version must equal the version being saved")
+    config["version"] = body.version
+    versions = _versions(db, game_id)
+    if any(v.version == body.version for v in versions):
+        raise_error(409, "version_exists", f"{game_id} {body.version} already exists")
+    approved = [v for v in versions if v.status == "approved"]
+    base = approved[-1] if approved else (versions[-1] if versions else None)
+    if base is not None:
+        locked = game_drafts.locked_changes(base.config, config)
+        if locked:
+            raise_error(
+                422,
+                "locked_field_changed",
+                f"locked fields changed: {', '.join(locked[:10])}",
+                paths=locked,
+            )
+    errors = game_drafts.schema_errors(config)
+    if errors:
+        raise_error(422, "invalid_config", "; ".join(errors[:10]), errors=errors[:50])
+    row = GameVersion(
+        game_id=game_id,
+        version=body.version,
+        config_id=str(config.get("config_id", f"{game_id}@{body.version}")),
+        config=config,
+        sha256=canonical_sha256(config),
+        status="draft",
+        source_path=None,
+    )
+    db.add(row)
+    db.flush()
+    db.refresh(row)
+    set_audit(
+        request,
+        action="games.draft_create",
+        resource_type="game_version",
+        resource_id=f"{game_id}@{body.version}",
+        sha256=row.sha256,
+        base_version=base.version if base else None,
+    )
+    return GameVersionOut.model_validate(row)
 
 
 @router.get("/{game_id}/versions/{version}", response_model=GameVersionDetail, summary="Version with full config")

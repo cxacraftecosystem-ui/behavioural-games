@@ -456,6 +456,32 @@ export async function mockAdminApi(page: Page): Promise<void> {
       updated_at: ago(60 * 24 * 15),
     },
   ];
+  const commands = new Map<string, Record<string, unknown>[]>();
+  const takes = new Map<string, Record<string, unknown>[]>();
+  const users = [
+    {
+      username: 'dev-admin',
+      roles: ['admin'],
+      studies: ['*'],
+      disabled: false,
+      locked_until: null,
+      last_login_at: ago(5),
+      must_change_password: false,
+      created_at: ago(60 * 24 * 30),
+      created_by: 'cli',
+    },
+    {
+      username: 'r.menon',
+      roles: ['researcher'],
+      studies: ['S-PILOT'],
+      disabled: false,
+      locked_until: null,
+      last_login_at: ago(60 * 20),
+      must_change_password: false,
+      created_at: ago(60 * 24 * 25),
+      created_by: 'cli',
+    },
+  ];
   const audit = auditRows([
     { previous: null, next: v1, actor: 'r.menon', at: ago(60 * 24 * 10) },
     { previous: v1, next: v1approved, actor: 'dev-admin', at: ago(60 * 24 * 9) },
@@ -480,6 +506,25 @@ export async function mockAdminApi(page: Page): Promise<void> {
     const list = versions.get(parts[0] ?? '');
     if (!list)
       return json(route, { detail: { code: 'unknown_game', message: 'game not found' } }, 404);
+    if (parts[1] === 'versions' && parts.length === 2 && method === 'POST') {
+      const body = route.request().postDataJSON() as { version: string; config: unknown };
+      if (list.some((x) => x.version === body.version))
+        return json(route, { detail: { code: 'version_exists', message: 'version exists' } }, 409);
+      const row = {
+        id: 9000 + list.length,
+        game_id: parts[0],
+        version: body.version,
+        config_id: `${parts[0]}@${body.version}`,
+        config: body.config,
+        sha256: 'd'.repeat(64),
+        status: 'draft',
+        approved_by: [],
+        approved_at: null,
+        source_path: null,
+      };
+      list.push(row);
+      return json(route, strip(row), 201);
+    }
     if (parts[1] === 'versions' && parts.length === 2) return json(route, list.map(strip));
     if (parts[1] === 'versions' && parts[2]) {
       const v = list.find((x) => x.version === decodeURIComponent(parts[2] ?? ''));
@@ -576,6 +621,177 @@ export async function mockAdminApi(page: Page): Promise<void> {
           },
         },
       });
+    }
+    // Kiosk remote commands (idempotent by key).
+    const cmd = /^\/kiosks\/([^/]+)\/commands(?:\/([^/]+)\/cancel)?$/.exec(path);
+    if (cmd) {
+      const kioskId = decodeURIComponent(cmd[1] ?? '');
+      const list = commands.get(kioskId) ?? [];
+      commands.set(kioskId, list);
+      if (cmd[2] && method === 'POST') {
+        const row = list.find((c) => c.command_id === cmd[2]);
+        if (!row)
+          return json(route, { detail: { code: 'unknown_command', message: 'not found' } }, 404);
+        row.status = 'cancelled';
+        return json(route, row);
+      }
+      if (method === 'POST') {
+        const body = route.request().postDataJSON() as {
+          command: string;
+          idempotency_key: string;
+          reason: string | null;
+          confirm_kiosk_id: string | null;
+        };
+        const existing = list.find((c) => c.idempotency_key === body.idempotency_key);
+        if (existing) return json(route, existing);
+        if (body.command === 'wipe' && body.confirm_kiosk_id !== kioskId)
+          return json(
+            route,
+            { detail: { code: 'confirm_required', message: 'confirm the kiosk id' } },
+            422,
+          );
+        const row = {
+          command_id: `c0ffee00-0000-4000-8000-${String(list.length + 1).padStart(12, '0')}`,
+          kiosk_id: kioskId,
+          command: body.command,
+          idempotency_key: body.idempotency_key,
+          status: 'queued',
+          reason: body.reason,
+          issued_by: 'dev-admin',
+          created_at: ago(0),
+          expires_at: ago(-60 * 24 * 7),
+          delivered_at: null,
+          acknowledged_at: null,
+          result: {},
+          error: null,
+        };
+        list.unshift(row);
+        return json(route, row, 201);
+      }
+      return json(route, list);
+    }
+    if (path === '/users' && method === 'GET') return json(route, users);
+    const grants = /^\/users\/([^/]+)\/grants$/.exec(path);
+    if (grants && method === 'PUT') {
+      const user = users.find((u) => u.username === decodeURIComponent(grants[1] ?? ''));
+      if (!user)
+        return json(route, { detail: { code: 'unknown_user', message: 'not found' } }, 404);
+      Object.assign(user, route.request().postDataJSON() as Record<string, unknown>);
+      return json(route, user);
+    }
+    if (path === '/retention/policy')
+      return json(route, {
+        version: '1.0.0',
+        sha256: 'f'.repeat(64),
+        rules: [
+          {
+            id: 'play_only_raw_events',
+            data_class: 'raw',
+            description: 'Raw events of play-only sessions.',
+            ttl_days: 90,
+            enabled: true,
+          },
+          {
+            id: 'telemetry',
+            data_class: 'telemetry',
+            description: 'System events and device health.',
+            ttl_days: 90,
+            enabled: true,
+          },
+          {
+            id: 'security_logs',
+            data_class: 'security_logs',
+            description: 'Audit events older than a year.',
+            ttl_days: 365,
+            enabled: true,
+          },
+        ],
+      });
+    if (path === '/retention/runs')
+      return json(route, [
+        {
+          id: '0c9d8e7f-2222-4b3c-8d4e-000000000008',
+          started_at: ago(60 * 24),
+          finished_at: ago(60 * 24 - 1),
+          dry_run: false,
+          policy_sha256: 'f'.repeat(64),
+          report: { policy_version: '1.0.0', rules: { telemetry: { affected: 212 } } },
+          status: 'completed',
+          triggered_by: 'system',
+        },
+      ]);
+    if (path === '/legal-holds' && method === 'GET')
+      return json(route, [
+        {
+          id: 3,
+          scope_kind: 'study',
+          scope_value: 'S-PILOT',
+          reason: 'Ethics committee review of the pilot',
+          created_by: 'dev-admin',
+          created_at: ago(60 * 24 * 3),
+          released_at: null,
+        },
+      ]);
+    const sign = /^\/policies\/([^/]+)\/sign$/.exec(path);
+    if (sign && method === 'POST')
+      return json(route, {
+        policy_version: decodeURIComponent(sign[1] ?? ''),
+        sha256: 'a'.repeat(64),
+        signature: 'c2lnbmF0dXJl',
+        key_id: 'release-2026',
+        algorithm: 'ed25519',
+        signed_by: 'dev-admin',
+        signed_at: ago(0),
+      });
+    if (path === '/content/lines' && method === 'GET')
+      return json(route, {
+        catalogue_version: '0.1.0',
+        reference_language: 'en-IN',
+        languages: [],
+        lines: [],
+      });
+    const audio = /^\/content\/audio\/([^/]+)\/([^/]+)$/.exec(path);
+    if (audio) {
+      const key = `${audio[1]}|${audio[2]}`;
+      const list = takes.get(key) ?? [];
+      takes.set(key, list);
+      if (method === 'POST') {
+        const row = {
+          id: `a0d10000-0000-4000-8000-${String(list.length + 1).padStart(12, '0')}`,
+          line_id: decodeURIComponent(audio[1] ?? ''),
+          language: decodeURIComponent(audio[2] ?? ''),
+          filename: 'take.wav',
+          content_type: 'audio/wav',
+          size_bytes: 96044,
+          sha256: 'e'.repeat(64),
+          duration_ms: 1000,
+          peak_dbfs: -3.1,
+          rms_dbfs: -18.2,
+          status: 'pending_qc',
+          uploaded_by: 'dev-admin',
+          created_at: ago(0),
+        };
+        list.unshift(row);
+        return json(route, row, 201);
+      }
+      return json(route, list);
+    }
+    if (
+      /^\/content\/lines\/[^/]+\/languages\/[^/]+\/transitions$/.test(path) &&
+      method === 'POST'
+    ) {
+      const body = route.request().postDataJSON() as Record<string, string>;
+      return json(
+        route,
+        {
+          id: 1,
+          from_status: 'forward_translated',
+          recorded_by: 'dev-admin',
+          created_at: ago(0),
+          ...body,
+        },
+        201,
+      );
     }
     return json(route, { detail: 'not mocked' }, 404);
   });

@@ -93,9 +93,7 @@ function SettingDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{setting ? `Edit ${setting.key}` : 'New runtime setting'}</DialogTitle>
-          <DialogDescription>
-            Saved with your name; the audit log keeps the previous and new value.
-          </DialogDescription>
+          <DialogDescription>Saved with your name and audited.</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-3"
@@ -178,7 +176,7 @@ export function RuntimeSettingsPanel() {
   return (
     <Section
       title="Runtime settings"
-      description="Operational configuration read by the API and worker. Scientific thresholds are not settings: they live in stats/measurement-model YAML."
+      description="Operational settings for the API and worker."
       actions={
         <Can all={['admin.settings']}>
           <Button size="sm" variant="outline" onClick={() => setCreating(true)}>

@@ -1,55 +1,36 @@
 'use client';
 
-import { MenuIcon } from 'lucide-react';
+import { ChevronRightIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Fragment, type ReactNode, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
+import { Fragment, type ReactNode } from 'react';
 import { breadcrumbs } from '@/lib/nav';
 import { DemoBanner } from './demo-banner';
+import { IslandNav } from './island-nav';
 import { PasswordChangeBanner } from './password-change-banner';
-import { SidebarNav } from './sidebar-nav';
-import { StudySwitcher } from './study-switcher';
-import { ThemeToggle } from './theme-toggle';
-import { UserMenu } from './user-menu';
 
-function Brand() {
-  return (
-    <Link href="/research" className="flex items-center gap-2 px-4 py-3.5">
-      <span
-        aria-hidden="true"
-        className="flex size-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground"
-      >
-        S
-      </span>
-      <span className="leading-tight">
-        <span className="block text-sm font-semibold">SHRIII</span>
-        <span className="block text-[11px] text-muted-foreground">
-          Behavioural Games · Research
-        </span>
-      </span>
-    </Link>
-  );
-}
-
+/** The one way up a level. Shown only when there is somewhere to go (two or more crumbs). */
 function Breadcrumbs() {
   const pathname = usePathname();
   const crumbs = breadcrumbs(pathname);
-  if (crumbs.length === 0) return null;
+  if (crumbs.length < 2) return null;
   return (
-    <nav aria-label="Breadcrumb" className="min-w-0">
-      <ol className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+    <nav aria-label="Breadcrumb" className="mb-4 min-w-0">
+      <ol className="flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted-foreground">
         {crumbs.map((c, i) => (
           <Fragment key={c.href}>
-            {i > 0 && <li aria-hidden="true">/</li>}
-            <li className="truncate">
+            {i > 0 && (
+              <li aria-hidden="true">
+                <ChevronRightIcon className="size-3.5 opacity-60" />
+              </li>
+            )}
+            <li className="max-w-[16rem] truncate">
               {i === crumbs.length - 1 ? (
                 <span aria-current="page" className="font-medium text-foreground">
                   {c.label}
                 </span>
               ) : (
-                <Link href={c.href} className="hover:text-foreground">
+                <Link href={c.href} className="rounded-sm hover:text-accent-foreground">
                   {c.label}
                 </Link>
               )}
@@ -61,57 +42,33 @@ function Breadcrumbs() {
   );
 }
 
-/** Console chrome: sidebar (sheet on small screens), top bar, main content. */
+/**
+ * Console chrome (skill §6.2): skip link, the island nav, and the page frame. `lg:pt-24` is the island
+ * clearance contract; below `lg` the top padding clears the 56px top bar and the bottom padding clears
+ * the bottom island. Never add top or bottom padding of your own for the nav.
+ */
 export function AppShell({ children }: { readonly children: ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
   return (
-    <div className="flex min-h-dvh">
+    <div className="min-h-dvh bg-background">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-60 focus:rounded-md focus:bg-card focus:px-3 focus:py-2 focus:shadow-md"
       >
         Skip to content
       </a>
-      {/* The coloured rail stretches with the page (so full-page captures and long pages keep the
-          sidebar background); the nav inside stays sticky at viewport height. */}
-      <div className="hidden w-60 shrink-0 border-r bg-sidebar lg:block">
-        <aside className="sticky top-0 flex h-dvh flex-col overflow-y-auto">
-          <Brand />
-          <SidebarNav />
-        </aside>
-      </div>
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-64 bg-sidebar p-0">
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SheetDescription className="sr-only">Console sections you can open</SheetDescription>
-          <Brand />
-          <SidebarNav onNavigate={() => setMobileOpen(false)} />
-        </SheetContent>
-      </Sheet>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <IslandNav />
+      <main
+        id="main"
+        tabIndex={-1}
+        key={pathname}
+        className="console-main mx-auto w-full max-w-7xl px-4 pt-[calc(3.5rem+1.25rem)] pb-[calc(6rem+env(safe-area-inset-bottom))] outline-none sm:px-6 lg:pt-24 lg:pb-12"
+      >
         <DemoBanner />
         <PasswordChangeBanner />
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b bg-background/90 px-3 backdrop-blur sm:px-5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="lg:hidden"
-            aria-label="Open navigation"
-            onClick={() => setMobileOpen(true)}
-          >
-            <MenuIcon />
-          </Button>
-          <Breadcrumbs />
-          <div className="ml-auto flex items-center gap-1.5">
-            <StudySwitcher />
-            <ThemeToggle />
-            <UserMenu />
-          </div>
-        </header>
-        <main id="main" className="mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 sm:px-6">
-          {children}
-        </main>
-      </div>
+        <Breadcrumbs />
+        {children}
+      </main>
     </div>
   );
 }

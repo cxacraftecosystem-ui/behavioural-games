@@ -37,6 +37,22 @@ async function loadDevValidator(bridge: boolean): Promise<EventValidator | null>
 export function App({ config }: { readonly config: KioskConfig }): ReactElement | null {
   const [runtime, setRuntime] = useState<KioskRuntime | null>(null);
   const [validate, setValidate] = useState<EventValidator | null | undefined>(undefined);
+  // In Electron the device token comes from provisioning through the preload bridge (never baked into
+  // the bundle); the browser build uses the bridge-build env token only.
+  const [electronToken, setElectronToken] = useState<string | null | undefined>(
+    window.shriiiKiosk?.getInfo ? undefined : null,
+  );
+  useEffect(() => {
+    let alive = true;
+    const getInfo = window.shriiiKiosk?.getInfo;
+    if (!getInfo) return;
+    getInfo()
+      .then((info) => alive && setElectronToken(info?.deviceToken ?? null))
+      .catch(() => alive && setElectronToken(null));
+    return () => {
+      alive = false;
+    };
+  }, []);
   useEffect(() => {
     let alive = true;
     void loadDevValidator(config.bridge).then((v) => {
@@ -51,6 +67,7 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
     if (!config.bridge) return;
     (globalThis as { __shriiiKiosk?: KioskRuntime | null }).__shriiiKiosk = runtime;
   }, [config.bridge, runtime]);
+  const deviceToken = config.deviceToken ?? electronToken ?? null;
   const options = useMemo(
     () => ({
       apiBase: config.apiBase,
@@ -62,7 +79,8 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
       artFactory: config.testTimingProfile ? LOW_SPEC_ART_FACTORY : ART_FACTORY,
       audioFactory: AUDIO_FACTORY,
       ...(config.kioskId ? { device: { kioskId: config.kioskId } } : {}),
-      ...(config.deviceToken ? { deviceToken: config.deviceToken } : {}),
+      ...(deviceToken ? { deviceToken } : {}),
+      pinnedReleaseKeys: config.pinnedReleaseKeys,
       // Test bridge builds run on software GL in CI: keep animations on wall-clock time.
       ...(config.bridge ? { wallClockAnimations: true } : {}),
       ...(config.pxPerMm ? { pxPerMm: config.pxPerMm } : {}),
@@ -70,9 +88,9 @@ export function App({ config }: { readonly config: KioskConfig }): ReactElement 
       ...(config.testTimingProfile ? { testTimingProfile: true } : {}),
       ...(validate ? { validate } : {}),
     }),
-    [config, validate],
+    [config, validate, deviceToken],
   );
-  if (validate === undefined) return null;
+  if (validate === undefined || electronToken === undefined) return null;
   return (
     <div
       style={{ position: 'fixed', inset: 0 }}

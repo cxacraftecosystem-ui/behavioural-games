@@ -15,7 +15,7 @@ import { useStudyScope } from '@/lib/study-scope';
 const ALL = '__all__';
 
 /** Focus the console on one study (only studies in the principal's scope are offered). */
-export function StudySwitcher() {
+export function StudySwitcher({ compact = false }: { readonly compact?: boolean }) {
   const { principal } = useAuth();
   const { studies, studyId, setStudyId, isLoading } = useStudyScope();
   if (!hasPermission(principal, 'studies.read')) return null;
@@ -25,7 +25,11 @@ export function StudySwitcher() {
       onValueChange={(v) => setStudyId(v === ALL ? null : v)}
       disabled={isLoading}
     >
-      <SelectTrigger size="sm" className="max-w-56" aria-label="Study">
+      <SelectTrigger
+        size="sm"
+        className={compact ? 'max-w-40 rounded-full' : 'max-w-48 rounded-full xl:max-w-56'}
+        aria-label="Study"
+      >
         <FlaskConicalIcon className="text-muted-foreground" />
         <SelectValue placeholder={isLoading ? 'Loading studies…' : 'All studies'} />
       </SelectTrigger>

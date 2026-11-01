@@ -23,8 +23,7 @@ export function isDemoValue(value: string | undefined): boolean {
 export const DEMO_MODE: boolean = isDemoValue(process.env.NEXT_PUBLIC_DEMO_MODE);
 
 export const DEMO_BANNER_TITLE = 'Demo data — synthetic, not study results';
-export const DEMO_READ_ONLY_MESSAGE =
-  'This is a read-only demo with no backend connected, so changes are disabled.';
+export const DEMO_READ_ONLY_MESSAGE = 'Read-only demo — changes are off.';
 
 /** Roles offered by the demo sign-in. */
 export const DEMO_ROLES = ['researcher', 'admin'] as const;

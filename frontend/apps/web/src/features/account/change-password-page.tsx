@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useId, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/data/page-header';
+import { ActionGroup } from '@/components/ui/action-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,17 +94,14 @@ export function ChangePasswordPage() {
           <ShieldAlertIcon />
           <AlertTitle>Replace your initial password</AlertTitle>
           <AlertDescription>
-            Your account still uses the password an administrator issued, which others may have
-            seen. Choose a new one that only you know before working with study data.
+            Choose one only you know before working with study data.
           </AlertDescription>
         </Alert>
       )}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">New password</CardTitle>
-          <CardDescription>
-            Use a long passphrase. A password manager can generate and remember one.
-          </CardDescription>
+          <CardDescription>A long passphrase works best.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -159,7 +157,7 @@ export function ChangePasswordPage() {
                   key={c.id}
                   className={
                     c.ok
-                      ? 'flex items-center gap-2 text-emerald-700 dark:text-emerald-400'
+                      ? 'flex items-center gap-2 text-success'
                       : 'flex items-center gap-2 text-muted-foreground'
                   }
                 >
@@ -181,15 +179,19 @@ export function ChangePasswordPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" disabled={busy}>
-                {busy ? <Loader2Icon className="animate-spin" /> : <KeyRoundIcon />}
-                Change password
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => router.replace(next)}>
+            <ActionGroup align="end">
+              <Button type="button" variant="outline" onClick={() => router.replace(next)}>
                 {initial ? 'Remind me later' : 'Cancel'}
               </Button>
-            </div>
+              <Button type="submit" disabled={busy}>
+                {busy ? (
+                  <Loader2Icon className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <KeyRoundIcon aria-hidden="true" />
+                )}
+                Change password
+              </Button>
+            </ActionGroup>
           </form>
         </CardContent>
       </Card>
