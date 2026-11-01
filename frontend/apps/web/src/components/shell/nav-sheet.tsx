@@ -4,6 +4,7 @@ import { ExternalLinkIcon, MonitorIcon, MoonIcon, SunIcon, XIcon } from 'lucide-
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { Dialog as DialogPrimitive } from 'radix-ui';
+import type { RefObject } from 'react';
 import type { NavSection } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { NavIcon } from './nav-icon';
@@ -57,7 +58,9 @@ export function NavSheet({
   onOpenChange,
   sections,
   activeHref,
+  returnFocusTo,
 }: {
+  readonly returnFocusTo?: RefObject<HTMLElement | null>;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly sections: readonly NavSection[];
@@ -70,6 +73,13 @@ export function NavSheet({
         <DialogPrimitive.Content
           data-testid="nav-sheet"
           aria-describedby={undefined}
+          onCloseAutoFocus={(event) => {
+            const opener = returnFocusTo?.current;
+            if (opener?.isConnected) {
+              event.preventDefault();
+              opener.focus();
+            }
+          }}
           className="nav-sheet fixed inset-x-0 top-0 z-50 mx-auto w-[min(680px,92vw)] rounded-xl border border-border bg-card text-card-foreground shadow-lg duration-200 ease-out data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2"
         >
           <div className="mb-4 flex items-center justify-between gap-4">

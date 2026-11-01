@@ -3,7 +3,7 @@
 import { ChevronDownIcon, MenuIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -121,6 +121,13 @@ export function IslandNav() {
   const pathname = usePathname();
   const compact = useCompactOnScroll();
   const [sheetOpen, setSheetOpen] = useState(false);
+  // The button that opened the sheet gets focus back when it closes (there is no Dialog.Trigger: two
+  // buttons open it, the island's menu button and the bottom island's "More").
+  const openerRef = useRef<HTMLElement | null>(null);
+  const openSheet = (event: MouseEvent<HTMLElement>) => {
+    openerRef.current = event.currentTarget;
+    setSheetOpen(true);
+  };
   const sections = useMemo(() => visibleNav(principal), [principal]);
   const slots = useMemo(() => islandSlots(principal), [principal]);
   const activeHref = navItemFor(pathname)?.href ?? null;
@@ -186,7 +193,7 @@ export function IslandNav() {
               aria-haspopup="dialog"
               aria-expanded={sheetOpen}
               data-testid="menu-button"
-              onClick={() => setSheetOpen(true)}
+              onClick={openSheet}
             >
               <MenuIcon />
             </Button>
@@ -233,7 +240,7 @@ export function IslandNav() {
             aria-haspopup="dialog"
             aria-expanded={sheetOpen}
             data-testid="more-button"
-            onClick={() => setSheetOpen(true)}
+            onClick={openSheet}
             className="flex min-h-12 min-w-14 flex-col items-center justify-center gap-0.5 rounded-full px-2.5 text-[11px] font-medium text-muted-foreground transition-colors duration-200 ease-out hover:text-foreground"
           >
             <MenuIcon className="size-5" aria-hidden="true" />
@@ -243,6 +250,7 @@ export function IslandNav() {
       </div>
 
       <NavSheet
+        returnFocusTo={openerRef}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         sections={sections}

@@ -15,6 +15,9 @@ function ConsoleToaster() {
     <Toaster
       closeButton
       position="bottom-right"
+      // Clear of the bottom island below lg (sonner's own mobile breakpoint is 600px, ours is 1024).
+      offset={{ bottom: 96, right: 24 }}
+      mobileOffset={{ bottom: 96 }}
       theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
       toastOptions={{ className: 'font-sans' }}
     />

@@ -13,6 +13,7 @@ import type { CardSortStore } from './data/store.ts';
 import type { AuditEntry, DeviceSettings, OutboxItem, SessionRecord } from './data/types.ts';
 import type { KeyIndex } from './domain/cards.ts';
 import { type EngineState, respond } from './domain/engine.ts';
+import { exportFileName } from './naming.ts';
 import { requeue, syncOutbox } from './sync/outbox.ts';
 import {
   AbortPanel,
@@ -275,7 +276,7 @@ export function App({ store }: { store: CardSortStore }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `card-sort-export-${settings?.deviceId ?? 'device'}-${Date.now()}.json`;
+    a.download = exportFileName(settings?.deviceId);
     a.click();
     URL.revokeObjectURL(url);
   };

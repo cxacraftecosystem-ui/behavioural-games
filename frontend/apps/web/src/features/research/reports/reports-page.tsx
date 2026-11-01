@@ -19,6 +19,7 @@ import { errorMessage } from '@/lib/api/errors';
 import { useApi, useAuth } from '@/lib/auth/auth-context';
 import { downloadBlob } from '@/lib/export';
 import { formatDateTime, shortId } from '@/lib/format';
+import { dataFileName } from '@/lib/naming';
 import { useConstructs, useDeviations, useRunDetails, useRuns } from '../api/hooks';
 import type { RunOut } from '../api/types';
 import { asRecord } from '../api/types';
@@ -135,7 +136,12 @@ export function ReportsPage({ science }: { readonly science: ScienceConfig }) {
     const html = reportHtml(title, meta, sections, sel.synthetic);
     downloadBlob(
       new Blob([html], { type: 'text/html;charset=utf-8' }),
-      `${sel.snapshot?.study_id ?? 'study'}-validation-report.html`,
+      dataFileName({
+        entity: 'Study',
+        subject: sel.study?.code ?? sel.snapshot?.study_id,
+        what: 'Validation-Report',
+        ext: 'html',
+      }),
     );
   };
   const downloadFigures = () => {
@@ -147,7 +153,13 @@ export function ReportsPage({ science }: { readonly science: ScienceConfig }) {
       k += 1;
       downloadBlob(
         new Blob([clone.outerHTML], { type: 'image/svg+xml' }),
-        `${sel.snapshot?.study_id ?? 'study'}-figure-${k}.svg`,
+        dataFileName({
+          entity: 'Study',
+          subject: sel.study?.code ?? sel.snapshot?.study_id,
+          what: 'Figure',
+          sequence: k,
+          ext: 'svg',
+        }),
       );
     }
     toast[k ? 'success' : 'info'](
@@ -163,7 +175,16 @@ export function ReportsPage({ science }: { readonly science: ScienceConfig }) {
       );
       if (!response.ok || !(data instanceof Blob))
         throw new Error(`download failed (${response.status})`);
-      downloadBlob(data, `${sel.snapshot.study_id}-${sel.snapshot.snapshot_id}.parquet`);
+      downloadBlob(
+        data,
+        dataFileName({
+          entity: 'Snapshot',
+          subject: sel.study?.code ?? sel.snapshot.study_id,
+          what: 'Snapshot',
+          sequence: sel.snapshot.snapshot_id,
+          ext: 'parquet',
+        }),
+      );
       toast.success('Snapshot downloaded.');
     } catch (e) {
       toast.error(errorMessage(e));
@@ -352,7 +373,13 @@ export function ReportsPage({ science }: { readonly science: ScienceConfig }) {
                           onClick={() =>
                             downloadBlob(
                               new Blob([tableCsv(t)], { type: 'text/csv;charset=utf-8' }),
-                              `${sel.snapshot?.study_id ?? 'study'}-${t.id}.csv`,
+                              dataFileName({
+                                entity: 'Study',
+                                subject: sel.study?.code ?? sel.snapshot?.study_id,
+                                what: 'Table',
+                                sequence: t.id,
+                                ext: 'csv',
+                              }),
                             )
                           }
                         >

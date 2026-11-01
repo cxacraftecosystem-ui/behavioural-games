@@ -7,8 +7,9 @@
  * Kiosk rules (skill §20): the art kit's tokens, so a fallback reads like the real screen. Confirm is
  * a teal CIRCLE with a tick, cancel a burnt-orange ROUNDED SQUARE with a cross (shape + icon + colour,
  * never colour alone); confirm sits on the right, cancel on the left; the icon on every face keeps
- * >= 3:1 against it; every control has an accessible name even though nothing is printed; attention
- * pulses stop under reduced motion and leave a static ring; the walkaway countdown keeps running.
+ * >= 4.5:1 against it (KSK-06); every control has an accessible name even though nothing is printed;
+ * attention pulses stop under reduced motion and leave a static ring; the walkaway countdown keeps
+ * running.
  */
 import type { LanguageTag, SessionState } from '@shriii/contracts';
 import {
@@ -48,8 +49,12 @@ export const COLORS = {
   paper: hex(MELA.cream),
   ink: hex(MELA.ink),
 };
-/** Okabe-Ito: separable for every common colour-vision deficiency. Order is the cue, never cycled. */
-export const LANGUAGE_COLORS = ['#0072b2', '#e69f00', '#009e73', '#cc79a7', '#56b4e9', '#d55e00'];
+/**
+ * Okabe-Ito, separable for every common colour-vision deficiency; order is the cue, never cycled. The
+ * sixth slot is Tol's wine instead of Okabe-Ito vermilion: vermilion carries neither the cream nor the
+ * dark icon at 4.5:1, and it reads as the cancel face.
+ */
+export const LANGUAGE_COLORS = ['#0072b2', '#e69f00', '#009e73', '#cc79a7', '#56b4e9', '#882255'];
 
 function luminance(color: string): number {
   const n = Number.parseInt(color.slice(1), 16);
@@ -76,9 +81,11 @@ export function contrastRatio(a: string, b: string): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-/** Cream icon where it keeps >= 3:1 on the face (WCAG 1.4.11 for graphics), dark ink otherwise. */
+/** Cream or dark ink, whichever contrasts more with the face (KSK-06 asks for >= 4.5:1). */
 export function iconInkFor(face: string): string {
-  return contrastRatio(COLORS.paper, face) >= 3 ? COLORS.paper : COLORS.ink;
+  return contrastRatio(COLORS.paper, face) >= contrastRatio(COLORS.ink, face)
+    ? COLORS.paper
+    : COLORS.ink;
 }
 
 const centre: CSSProperties = {

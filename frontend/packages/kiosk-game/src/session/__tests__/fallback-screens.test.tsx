@@ -8,9 +8,9 @@ import {
 } from '../ui/FallbackScreens.tsx';
 
 describe('fallback screens (skill §20 kiosk rules)', () => {
-  it('keeps every icon at or above 3:1 against its face (WCAG 1.4.11)', () => {
+  it('keeps every icon at or above 4.5:1 against its face (KSK-06)', () => {
     for (const face of [COLORS.confirm, COLORS.cancel, COLORS.accent, ...LANGUAGE_COLORS]) {
-      expect(contrastRatio(iconInkFor(face), face), face).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(iconInkFor(face), face), face).toBeGreaterThanOrEqual(4.5);
     }
   });
 

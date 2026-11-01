@@ -88,7 +88,7 @@ export function TraitsPage({ science }: { readonly science: ScienceConfig }) {
     <div className="space-y-6">
       <PageHeader
         title="Traits"
-        description="What each construct claims, its evidence, its tasks and expected relations. Not validated scores."
+        description="What each construct claims, its evidence and its tasks. Not validated scores."
         meta={
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline" className="font-mono">

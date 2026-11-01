@@ -63,7 +63,7 @@
   --muted-foreground: var(--ink-500);
   --accent: var(--purple-50);
   --accent-foreground: var(--purple-700);
-  --destructive: #dc2626;
+  --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
   --border: var(--line-200);
   --input: var(--line-200);
@@ -71,11 +71,12 @@
   /* The keyboard's mark: one purple outline on every control on every screen. */
   --focus: var(--purple-700);
 
-  /* Status — themed so the word stays legible on either card. */
-  --success: #15803d;
+  /* Status — themed so the word keeps >= 4.5:1 on its own /10 tint over either card (axe-checked):
+     red-700 / green-800 / amber-800 / orange-800 light; 400-rungs dark. */
+  --success: #166534;
   --warning: #92400e;
   --info: var(--purple-700);
-  --status-serious: #c2410c;
+  --status-serious: #9a3412;
 
   /* Progress: a tinted track (never the card's own white) and a fill >= 3:1 against both. */
   --progress-track: #d9c4e9;

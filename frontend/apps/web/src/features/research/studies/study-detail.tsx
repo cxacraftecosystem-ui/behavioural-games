@@ -39,6 +39,7 @@ import { useApi, useAuth } from '@/lib/auth/auth-context';
 import { hasPermission } from '@/lib/auth/principal';
 import { downloadBlob } from '@/lib/export';
 import { formatDate, formatDateTime, formatInteger, shortId } from '@/lib/format';
+import { dataFileName } from '@/lib/naming';
 import {
   researchKeys,
   useDatasets,
@@ -1308,7 +1309,16 @@ function DatasetsTab({
       );
       if (!response.ok || error !== undefined || !(data instanceof Blob))
         throw new Error(`download failed (${response.status})`);
-      downloadBlob(data, `${d.study_id}-${d.snapshot_id}.parquet`);
+      downloadBlob(
+        data,
+        dataFileName({
+          entity: 'Snapshot',
+          subject: d.study_id,
+          what: 'Snapshot',
+          sequence: d.snapshot_id,
+          ext: 'parquet',
+        }),
+      );
     },
     onSuccess: () => toast.success('Snapshot downloaded.'),
     onError: (e) => toast.error(errorMessage(e)),

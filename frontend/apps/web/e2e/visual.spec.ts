@@ -49,6 +49,28 @@ async function expectAccessible(page: Page): Promise<void> {
   expect(summary).toEqual([]);
 }
 
+/** No horizontal page scroll; on failure, name the widest in-flow offenders. */
+async function expectNoHorizontalScroll(page: Page): Promise<void> {
+  const report = await page.evaluate(() => {
+    const doc = document.documentElement;
+    const width = doc.clientWidth;
+    const offenders: string[] = [];
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('main *'))) {
+      const r = el.getBoundingClientRect();
+      if (r.right > width + 1 && getComputedStyle(el).position !== 'fixed') {
+        const parent = el.parentElement?.getBoundingClientRect();
+        // Report only the outermost element that overflows (its parent still fits).
+        if (!parent || parent.right <= width + 1) {
+          const cls = (el.getAttribute('class') ?? '').split(' ').slice(0, 6).join('.');
+          offenders.push(`${el.tagName.toLowerCase()}.${cls} right=${Math.round(r.right)}`);
+        }
+      }
+    }
+    return { overflow: doc.scrollWidth - width, offenders: offenders.slice(0, 8) };
+  });
+  expect(report.overflow, report.offenders.join(' | ')).toBeLessThanOrEqual(0);
+}
+
 async function expectTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   const canvas = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
@@ -68,10 +90,17 @@ for (const vp of VIEWPORTS) {
         await expectTheme(page, theme);
         // The one action colour, in both themes: a filled purple-700 button with white text.
         const submit = form.getByRole('button', { name: 'Sign in' });
-        const bg = await submit.evaluate((el) => getComputedStyle(el).backgroundColor);
-        expect(bg).toMatch(/oklch\(0\.47 0\.198 305\)|rgb\(1[01]\d, 3\d, 1[4-6]\d\)/);
-        await expectAccessible(page);
+        const [actual, purple700] = await submit.evaluate((el) => {
+          const probe = document.createElement('span');
+          probe.style.backgroundColor = 'oklch(0.47 0.198 305)';
+          document.body.append(probe);
+          const want = getComputedStyle(probe).backgroundColor;
+          probe.remove();
+          return [getComputedStyle(el).backgroundColor, want];
+        });
+        expect(actual).toBe(purple700);
         await capture(page, `${vp.name}-${theme}-sign-in`);
+        await expectAccessible(page);
       });
 
       test('research overview, navigation and menu sheet', async ({ page }) => {
@@ -98,14 +127,9 @@ for (const vp of VIEWPORTS) {
           expect(box).not.toBeNull();
           expect((box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= vp.width).toBe(true);
         }
-        // No horizontal page scroll at any width.
-        const overflow = await page.evaluate(
-          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        );
-        expect(overflow).toBeLessThanOrEqual(0);
-
-        await expectAccessible(page);
         await capture(page, `${vp.name}-${theme}-research-overview`);
+        await expectNoHorizontalScroll(page);
+        await expectAccessible(page);
 
         // The sheet: every destination, focus trapped, Escape closes it and focus returns.
         const opener = page.getByTestId(vp.name === 'desktop' ? 'menu-button' : 'more-button');
@@ -114,8 +138,8 @@ for (const vp of VIEWPORTS) {
         await expect(sheet).toBeVisible();
         const nav = sheet.getByRole('navigation', { name: 'Console' });
         await expect(nav.locator('a[aria-current="page"]')).toHaveAttribute('href', '/research');
-        await expectAccessible(page);
         await capture(page, `${vp.name}-${theme}-menu`);
+        await expectAccessible(page);
         await page.keyboard.press('Escape');
         await expect(sheet).toBeHidden();
         await expect(opener).toBeFocused();
@@ -126,8 +150,9 @@ for (const vp of VIEWPORTS) {
         await mockResearchApi(page);
         await signIn(page, 'researcher', { next: '/research/studies' });
         await expect(page.getByRole('heading', { level: 1, name: 'Studies' })).toBeVisible();
-        await expectAccessible(page);
         await capture(page, `${vp.name}-${theme}-studies`);
+        await expectNoHorizontalScroll(page);
+        await expectAccessible(page);
       });
 
       test('admin kiosks', async ({ page }) => {
@@ -135,8 +160,9 @@ for (const vp of VIEWPORTS) {
         await mockAdminApi(page);
         await signIn(page, 'admin', { next: '/admin/kiosks' });
         await expect(page.getByRole('heading', { level: 1, name: 'Kiosks' })).toBeVisible();
-        await expectAccessible(page);
         await capture(page, `${vp.name}-${theme}-admin-kiosks`);
+        await expectNoHorizontalScroll(page);
+        await expectAccessible(page);
       });
     });
   }
