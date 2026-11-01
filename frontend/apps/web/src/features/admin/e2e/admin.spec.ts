@@ -138,6 +138,8 @@ test('content: coverage, catalogue, line detail with ITC steps and audio slot', 
 });
 
 test('kiosks: fleet health, kiosk detail and one-time token', async ({ page }) => {
+  // Fleet, detail sheet, two remote-command dialogs and registration: more than the 60 s default.
+  test.setTimeout(150_000);
   await page.goto('/admin/kiosks');
   await expect(page.getByRole('heading', { level: 1, name: 'Kiosks' })).toBeVisible();
   await expect(page.getByRole('cell', { name: /^pune-market-02 Hadapsar/ })).toBeVisible();
