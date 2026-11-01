@@ -2,6 +2,13 @@
 # The databases are on Supabase (docs/deploy/supabase.md); nothing stateful runs here except Caddy's
 # certificate store and the API data dir (demo summaries, local snapshots).
 #
+# Memory (t3.small, 1.9 GiB RAM + 2 GiB swapfile): api 700m, worker 600m, caddy 128m = 1.4 GiB of caps, leaving
+# ~0.5 GiB for the host (dockerd, containerd, SSM agent, journald: ~0.35 GiB measured). Measured peaks on
+# 2026-11-02: api 305 MiB, worker 245 MiB, caddy 29 MiB. The worker gets the larger multiple because batch scoring
+# loads a whole partition of raw events. Docker lets each container swap as much again as its cap (the swap limit
+# defaults to twice the memory cap), so a burst slows down instead of being OOM-killed. The one-shot migrate
+# service has no cap: synthetic.sh stops the worker while the demo pipeline runs in it.
+#
 # Run only through infra/ec2/deploy.sh, which renders the two env files first:
 #   /etc/shriii/api.env     secrets from SSM /shriii/prod/* (root-only, 0600, never in git or images)
 #   /etc/shriii/deploy.env  SITE_HOST, IMAGE_TAG, optional IMAGE_REGISTRY (non-secret; default: the ECR mirror,
@@ -40,14 +47,14 @@ services:
       DB_POOL_SIZE: "4"
     expose:
       - "8000"
-    mem_limit: 1536m
+    mem_limit: 700m
 
   worker:
     <<: *backend
     image: ${IMAGE_REGISTRY:-626159998512.dkr.ecr.ap-south-1.amazonaws.com/shriii}/behavioural-games-worker:${IMAGE_TAG:-latest}
     environment:
       DB_POOL_SIZE: "3"
-    mem_limit: 1536m
+    mem_limit: 600m
 
   # One-shot jobs (deploy.sh): `run --rm migrate` (research + identity Alembic upgrade), and the operator
   # commands in docs/deploy/aws-ec2.md (create-staff-user, demo seeding).
@@ -73,6 +80,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    mem_limit: 128m
     security_opt:
       - no-new-privileges:true
     cap_drop:
