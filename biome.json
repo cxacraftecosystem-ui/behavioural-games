@@ -12,6 +12,7 @@
       "!**/coverage",
       "!**/src/generated",
       "!docs/reference",
+      "!docs/readme-kit",
       "!**/pnpm-lock.yaml",
       "!backend/api/openapi.json",
       "!docs/security/scans",
