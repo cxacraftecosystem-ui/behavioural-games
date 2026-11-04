@@ -9,7 +9,6 @@
 # (admin content page).
 
 # Local state, caches and build output
-.git
 .vercel
 .env
 .env.*

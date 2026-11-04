@@ -256,7 +256,9 @@ Vercel project `behavioural-games` (scope `cxacraftecosystem-8028s-projects`, pr
 
 A push that changes only Markdown, `docs/`, `.github/` or `.claude/` does not build: the `ignoreCommand` in
 `frontend/apps/web/vercel.json` runs `git diff --quiet HEAD^ HEAD` over the whole repository with those paths
-excluded, and Vercel skips the deployment when it finds no other change.
+excluded, and Vercel skips the deployment when it finds no other change. Any git error, such as a missing parent
+commit, counts as a change, so the build runs. This needs the clone's `.git`, which is why `.vercelignore` does not
+list it (the Vercel CLI never uploads `.git` anyway).
 
 - **Production uses the live API.** `next.config.ts` rewrites `/api/v1/*`, `/healthz` and `/readyz` to
   `API_PROXY_TARGET` on the server, so the browser only talks to the Vercel origin, bearer tokens never cross
