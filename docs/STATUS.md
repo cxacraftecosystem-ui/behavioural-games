@@ -143,7 +143,7 @@ All 145 plan features, counted from the tables above. A range such as SCR-01 to 
 and PRV-06a count on their own, and a feature listed under two statuses counts once, under the weaker one.
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","pie1":"#762CB1","pie2":"#CD9200","pie3":"#AA69E9","pie4":"#A7A3BC","pie5":"#D6B6FB","pie6":"#615D7A","pieStrokeColor":"#FFFFFF","pieOuterStrokeColor":"#D6B6FB","pieSectionTextColor":"#FFFFFF","pieTitleTextColor":"#857F9E","pieLegendTextColor":"#857F9E","pieOpacity":"1"}}}%%
+%%{init: {"theme":"base","fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","themeVariables":{"fontSize":"15px","pie1":"#762CB1","pie2":"#CD9200","pie3":"#AA69E9","pie4":"#A7A3BC","pie5":"#D6B6FB","pie6":"#615D7A","pieStrokeColor":"#FFFFFF","pieOuterStrokeColor":"#D6B6FB","pieSectionTextColor":"#FFFFFF","pieTitleTextColor":"#857F9E","pieLegendTextColor":"#857F9E","pieOpacity":"1"}}}%%
 pie showData
   title Plan features by build status
   "Built" : 101
