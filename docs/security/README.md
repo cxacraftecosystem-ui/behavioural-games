@@ -36,7 +36,7 @@ pipeline started running. What moved:
 | Repository | `main` has no branch protection rule; changes land through pull requests by convention | C-36 in [controls-matrix.md](controls-matrix.md#changes-since-wave-1-2026-11-04) |
 
 ```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","pie1":"#762CB1","pie2":"#CD9200","pie3":"#AA69E9","pie4":"#A7A3BC","pie5":"#D6B6FB","pie6":"#615D7A","pieStrokeColor":"#FFFFFF","pieOuterStrokeColor":"#D6B6FB","pieSectionTextColor":"#FFFFFF","pieTitleTextColor":"#857F9E","pieLegendTextColor":"#857F9E","pieOpacity":"1"}}}%%
+%%{init: {"theme":"base","fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","themeVariables":{"fontSize":"15px","pie1":"#762CB1","pie2":"#CD9200","pie3":"#AA69E9","pie4":"#A7A3BC","pie5":"#D6B6FB","pie6":"#615D7A","pieStrokeColor":"#FFFFFF","pieOuterStrokeColor":"#D6B6FB","pieSectionTextColor":"#FFFFFF","pieTitleTextColor":"#857F9E","pieLegendTextColor":"#857F9E","pieOpacity":"1"}}}%%
 pie showData
   title Manual review findings SF-01 to SF-16
   "Open" : 8
