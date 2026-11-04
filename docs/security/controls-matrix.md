@@ -50,6 +50,29 @@ feature yet (proposed owner given).
 | C-35 | Secrets hygiene: settings validator requires explicit keys outside dev/test, refuses `AUTH_MODE=dev` and the default dev secret; no secrets in repo | PRV-07 | A-11, D-09 | **Implemented** (`settings.py` `_fill_dev_defaults`); semgrep `p/secrets` clean | Settings tests; secret scanning in CI |
 | C-36 | Change control: branch protection, two-person review, CODEOWNERS for security-sensitive paths, PLT-09 sign-off records for gates, dictionary and policy | PLT-09, PLT-04 | I-03, I-07 | Process | Repository settings audit |
 
+## Changes since wave 1 (2026-11-04)
+
+Controls whose status moved, checked against `main` at `b142b4c` and the production pilot. The matrix above keeps
+the wave-1 text.
+
+| ID | Now | Evidence |
+|---|---|---|
+| C-01 | Partial | Deployment policies are signed from `/admin` (`services/policy_signing.py`, migration `0008`); the Electron runtime takes backend recipient keys from the signed site policy; no fleet has run it |
+| C-03 | Partial | Unchanged: the leaf-only scrub (SF-05) is still open |
+| C-04 | Partial, mitigated in the pilot | The vault is a separate Supabase database with its own login role; the code fallback (SF-04) remains |
+| C-07 | Partial | TLS at Caddy with Let's Encrypt and HSTS; no kiosk mTLS in the pilot (step-ca is in `infra/pki`, no fleet) |
+| C-08 | Partial | Kiosks seal each session's DEK to the backend X25519 key (`@shriii/session-crypto`, `@shriii/outbox-sqlite`); keys come from SSM SecureString, not per-purpose KMS keys |
+| C-10 | Implemented | Five API roles; staff users and study grants are managed from `/admin` (migration `0008`), every write audited |
+| C-14 | Gap | Staff sign in with passwords (`AUTH_MODE=local`); MFA arrives with an OIDC provider |
+| C-19 | Implemented | Device tokens provisioned through the enrolment bundle, revocable from `/admin`; signed remote commands (lock, unlock, restart, sync, pull logs, wipe) run only in attract, and a wipe is refused under a legal hold |
+| C-20 | Partial | Caddy body limits (2 MB, 10 MB for imports) and header and body timeouts; no rate limits, no ingest admission control, no statement timeouts |
+| C-21 | Partial | CodeQL, OSV-Scanner and Dependabot run in CI; actions pinned by SHA; no semgrep, gitleaks, container scan, licence check or SBOM in CI |
+| C-23 | Partial | The updater verifies Ed25519-signed release manifests and refuses unsigned updates; kiosk releases build in CI; no ring has run |
+| C-33 | Implemented | Fuses and ASAR integrity set in `electron-builder.yml` (SF-09) |
+| C-34 | Partial | Supabase Pro daily backups, kept 7 days; separate backup keys and PITR not set up |
+| C-35 | Implemented | All production secrets in SSM; the settings validator refuses dev defaults with `ENV=prod` |
+| C-36 | Gap | No branch protection rule on `main` and no CODEOWNERS file |
+
 ## Coverage by plan feature
 
 | Feature | Controls | Overall wave-1 state |

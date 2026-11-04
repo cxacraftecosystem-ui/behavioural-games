@@ -83,6 +83,21 @@ another person's data would itself be a harm. No identity documents are collecte
 
 ### 4.3 Steps
 
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","primaryColor":"#F2E9FE","primaryTextColor":"#1E1B2E","primaryBorderColor":"#9148D2","secondaryColor":"#FAEECD","secondaryTextColor":"#1E1B2E","secondaryBorderColor":"#CD9200","tertiaryColor":"#F3F1FA","tertiaryTextColor":"#1E1B2E","tertiaryBorderColor":"#A7A3BC","mainBkg":"#F2E9FE","nodeBorder":"#9148D2","nodeTextColor":"#1E1B2E","lineColor":"#AA69E9","textColor":"#857F9E","edgeLabelBackground":"#F9F5FF","clusterBkg":"#F9F5FF","clusterBorder":"#D6B6FB","titleColor":"#762CB1","noteBkgColor":"#FAEECD","noteTextColor":"#1E1B2E","noteBorderColor":"#CD9200","actorBkg":"#F2E9FE","actorBorder":"#9148D2","actorTextColor":"#1E1B2E","actorLineColor":"#AA69E9","signalColor":"#AA69E9","signalTextColor":"#857F9E","labelBoxBkgColor":"#F2E9FE","labelBoxBorderColor":"#9148D2","labelTextColor":"#1E1B2E","loopTextColor":"#857F9E","activationBkgColor":"#E7D5FE","activationBorderColor":"#9148D2","sequenceNumberColor":"#FFFFFF","transitionColor":"#AA69E9","transitionLabelColor":"#857F9E","stateLabelColor":"#1E1B2E","stateBkg":"#F2E9FE","compositeBackground":"#F9F5FF","compositeTitleBackground":"#F2E9FE","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F9F5FF","relationColor":"#AA69E9","relationLabelBackground":"#F9F5FF","relationLabelColor":"#1E1B2E"}}}%%
+flowchart LR
+  REQ["1 · Request recorded<br/>sync stopped"] --> KI["2 · Kiosk purge<br/>DEK destroyed"]
+  KI --> PS["3 to 5 · Primary stores,<br/>vault, audio"]
+  PS --> SW{"6 · Sweep query<br/>zero rows in 72 h"}
+  SW --> CS["7 · Crypto-shred<br/>wrapped DEK"]
+  CS --> SN["8 · Snapshot tombstone<br/>and rebuild"]
+  SN --> EX["9 · Export recipients<br/>notified"]
+  EX --> BK["10 · Backups expire<br/>within 14 days"]
+  BK --> RC["11 · Signed receipt"]
+  classDef accent fill:#762CB1,stroke:#5F1C93,color:#FFFFFF
+  class SW accent
+```
+
 Steps 1 to 6 are PRV-06a (required before Stage 1); steps 7 to 11 complete PRV-06 (required before Stage 2
 for anything beyond primary stores).
 

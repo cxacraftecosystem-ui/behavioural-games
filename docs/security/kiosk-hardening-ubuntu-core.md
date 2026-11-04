@@ -4,6 +4,11 @@ Implements the design for KSK-09 (OS lockdown and tamper resistance), and suppor
 KSK-11, KSK-12 and PRV-07. Threats addressed: K-01 to K-14 in [threat-model.md](threat-model.md).
 Pass criteria: the KSK-09 escape checklist and [pentest-checklist.md](pentest-checklist.md) §1.
 
+Status on 2026-11-04: the image (`infra/kiosk-image`, built by `kiosk-image.yml`), the step-ca PKI (`infra/pki`),
+the provisioning CLI (`tools/provision`) and the Electron runtime exist, but no kiosk has been provisioned or run
+in the field.
+The original status line follows.
+
 Status: **design guide**. The wave-1 kiosk runs as a browser build plus an Electron scaffold; none of the
 image work below exists yet. Commands are given for Ubuntu Core 24 with snapd 2.6x; verify each against the
 current Canonical documentation when the image is built, and record the final model assertion and

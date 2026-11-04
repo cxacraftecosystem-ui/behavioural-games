@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="244" viewBox="0 0 1200 244" role="img" aria-label="The research programme: Stage 1 think-aloud next, then the Stage 2 pilot, Stage 3 retest, Stage 4 fairness and Stage 5 outcomes and norms">
+<title>The research programme: Stage 1 think-aloud next, then the Stage 2 pilot, Stage 3 retest, Stage 4 fairness and Stage 5 outcomes and norms</title>
+<defs>
+<style>.d{font-family:'Plus Jakarta Sans','Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}.s{font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}.m{font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'Liberation Mono',monospace}.rise{animation:rise .9s cubic-bezier(.2,.7,.2,1) both}@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}.prog{stroke-dasharray:1;stroke-dashoffset:0;animation:prog 2.4s cubic-bezier(.4,0,.2,1) .2s both}@keyframes prog{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}.halo{animation:halo 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}@keyframes halo{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.8);opacity:0}}.ahead{stroke-dasharray:2 10}.r0{animation-delay:0.1s}.r1{animation-delay:0.3s}.r2{animation-delay:0.4s}.r3{animation-delay:0.6s}.r4{animation-delay:0.7s}@media (prefers-reduced-motion:reduce){*{animation:none!important}.smil{display:none}.sweep{fill:url(#still)}}</style>
+<linearGradient id="pg" gradientUnits="userSpaceOnUse" x1="110" y1="0" x2="111" y2="0"><stop offset="0" stop-color="#762CB1"/><stop offset="1" stop-color="#AA69E9"/></linearGradient>
+</defs>
+<path class="ahead" d="M70 112 H1130" stroke="#DCD7EE" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+<g class="rise r0">
+<text x="110" y="82" class="m" fill="#762CB1" font-size="12" font-weight="600" letter-spacing="1.2" text-anchor="middle">STAGE 1</text>
+<circle class="halo" cx="110" cy="112" r="10" fill="#762CB1"/>
+<circle cx="110" cy="112" r="10" fill="#762CB1" stroke="#762CB1" stroke-width="3"/>
+<text x="110" y="156" class="d" fill="#1E1B2E" font-size="16" font-weight="700" text-anchor="middle">Think-aloud</text>
+<text x="110" y="179" class="s" fill="#615D7A" font-size="13" text-anchor="middle">Next: 30 to 40 per pathway</text>
+</g>
+<g class="rise r1">
+<text x="355" y="82" class="m" fill="#615D7A" font-size="12" font-weight="600" letter-spacing="1.2" text-anchor="middle">STAGE 2</text>
+
+<circle cx="355" cy="112" r="8" fill="#FFFFFF" stroke="#DCD7EE" stroke-width="3"/>
+<text x="355" y="156" class="d" fill="#1E1B2E" font-size="16" font-weight="700" text-anchor="middle">Pilot</text>
+<text x="355" y="179" class="s" fill="#615D7A" font-size="13" text-anchor="middle">450 per language, two arms</text>
+</g>
+<g class="rise r2">
+<text x="600" y="82" class="m" fill="#615D7A" font-size="12" font-weight="600" letter-spacing="1.2" text-anchor="middle">STAGE 3</text>
+
+<circle cx="600" cy="112" r="8" fill="#FFFFFF" stroke="#DCD7EE" stroke-width="3"/>
+<text x="600" y="156" class="d" fill="#1E1B2E" font-size="16" font-weight="700" text-anchor="middle">Retest</text>
+<text x="600" y="179" class="s" fill="#615D7A" font-size="13" text-anchor="middle">14 to 28 days later</text>
+</g>
+<g class="rise r3">
+<text x="845" y="82" class="m" fill="#615D7A" font-size="12" font-weight="600" letter-spacing="1.2" text-anchor="middle">STAGE 4</text>
+
+<circle cx="845" cy="112" r="8" fill="#FFFFFF" stroke="#DCD7EE" stroke-width="3"/>
+<text x="845" y="156" class="d" fill="#1E1B2E" font-size="16" font-weight="700" text-anchor="middle">Fairness</text>
+<text x="845" y="179" class="s" fill="#615D7A" font-size="13" text-anchor="middle">Invariance and DIF</text>
+</g>
+<g class="rise r4">
+<text x="1090" y="82" class="m" fill="#615D7A" font-size="12" font-weight="600" letter-spacing="1.2" text-anchor="middle">STAGE 5</text>
+
+<circle cx="1090" cy="112" r="8" fill="#FFFFFF" stroke="#DCD7EE" stroke-width="3"/>
+<text x="1090" y="156" class="d" fill="#1E1B2E" font-size="16" font-weight="700" text-anchor="middle">Outcomes</text>
+<text x="1090" y="179" class="s" fill="#615D7A" font-size="13" text-anchor="middle">Validity and norms</text>
+</g>
+</svg>

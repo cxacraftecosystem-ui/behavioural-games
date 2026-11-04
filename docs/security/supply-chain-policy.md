@@ -112,7 +112,23 @@ Write these as custom semgrep rules under `tools/semgrep/` (future work) and che
 Track each advisory as an issue with the reachability analysis. Kiosk fixes during a wave freeze need a
 PLT-09 emergency override record.
 
-## 9. Current state (2026-10-21)
+## 9. Current state
+
+### 2026-11-04
+
+| Policy item | State |
+|---|---|
+| Automated updates | Dependabot (`.github/dependabot.yml`): npm, uv (root workspace and the four tools with their own lockfile), GitHub Actions, Docker, Docker Compose and OpenTofu; weekly on Monday, minor and patch grouped (scientific Python, backend, kiosk runtime and JS toolchain in their own groups); `cooldown` gives a 7-day soak, 14 days for OpenTofu providers and 30 for majors; PostgreSQL majors stay manual. Renovate was removed: it never ran |
+| Cross-ecosystem scan | OSV-Scanner action 2.7.0 on every PR, every push to `main` and daily. 2.7 reads every YAML document of `pnpm-lock.yaml` (773 packages; 2.2.4 read only the first, 15 packages) |
+| SAST | CodeQL on every PR, every push to `main` and weekly; semgrep is not in CI |
+| Actions | Every action pinned to its latest release commit SHA with a version comment (Node 24 runtimes, CodeQL v4) |
+| Images | API and worker images built on every backend change to `main`, pushed to GHCR and mirrored to ECR through GitHub OIDC (no AWS keys in GitHub); not signed, no SBOM |
+| Kiosk | Electron releases (`kiosk-release.yml`, tags `kiosk-v*`) and the Ubuntu Core image (`kiosk-image.yml`) build in CI; update manifests are Ed25519-signed |
+| Open exception | `minimatch` 3.1.5 (no compatible fix; callers use the default export) in `osv-scanner.toml`, expires 31 December 2026 |
+| Still missing | pip-audit and pnpm audit as separate jobs, gitleaks, trivy, checkov, licence checks, SBOMs, cosign signing, CODEOWNERS and branch protection on `main` |
+
+### 2026-10-21 (wave 1)
+
 
 From the scan recorded in [scan-findings.md](scan-findings.md):
 - `pip-audit`: 100 locked Python packages of the wave-1 workspace, **no known vulnerabilities**.

@@ -63,6 +63,11 @@ restricted schemas. A permission-matrix test runs in CI (PRV-08 acceptance crite
 
 - Staff: OIDC single sign-on with MFA required for every role. Development uses a local signed-JWT login that
   is disabled in production builds.
+- Production pilot (2026-11-04): no OIDC provider is connected yet, so staff sign in with password accounts
+  (`AUTH_MODE=local`): scrypt hashes, a 15-minute lockout after five failures, a forced change of the
+  administrator-issued first password and 8-hour tokens that cannot be refreshed. This does **not** meet the MFA
+  rule above; it is acceptable only while the pilot holds synthetic data. Google sign-in for existing staff
+  accounts is built and off.
 - Kiosks: mutual TLS with short-lived device certificates from the internal CA; keys sealed in the TPM.
   A revoked certificate fails within 5 minutes.
 - Sessions time out after 30 minutes of inactivity for staff accounts with restricted access.

@@ -75,7 +75,33 @@ no keyboard), and any data from people who choose an under-18 age band.
 
 ### 2.3 Data flow
 
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","primaryColor":"#F2E9FE","primaryTextColor":"#1E1B2E","primaryBorderColor":"#9148D2","secondaryColor":"#FAEECD","secondaryTextColor":"#1E1B2E","secondaryBorderColor":"#CD9200","tertiaryColor":"#F3F1FA","tertiaryTextColor":"#1E1B2E","tertiaryBorderColor":"#A7A3BC","mainBkg":"#F2E9FE","nodeBorder":"#9148D2","nodeTextColor":"#1E1B2E","lineColor":"#AA69E9","textColor":"#857F9E","edgeLabelBackground":"#F9F5FF","clusterBkg":"#F9F5FF","clusterBorder":"#D6B6FB","titleColor":"#762CB1","noteBkgColor":"#FAEECD","noteTextColor":"#1E1B2E","noteBorderColor":"#CD9200","actorBkg":"#F2E9FE","actorBorder":"#9148D2","actorTextColor":"#1E1B2E","actorLineColor":"#AA69E9","signalColor":"#AA69E9","signalTextColor":"#857F9E","labelBoxBkgColor":"#F2E9FE","labelBoxBorderColor":"#9148D2","labelTextColor":"#1E1B2E","loopTextColor":"#857F9E","activationBkgColor":"#E7D5FE","activationBorderColor":"#9148D2","sequenceNumberColor":"#FFFFFF","transitionColor":"#AA69E9","transitionLabelColor":"#857F9E","stateLabelColor":"#1E1B2E","stateBkg":"#F2E9FE","compositeBackground":"#F9F5FF","compositeTitleBackground":"#F2E9FE","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F9F5FF","relationColor":"#AA69E9","relationLabelBackground":"#F9F5FF","relationLabelColor":"#1E1B2E"}}}%%
+flowchart TD
+  subgraph Kiosk["Kiosk, offline-first, per-session key"]
+    K1["Language"] --> K2["Spoken consent, tap"] --> K3["Picture bands"]
+    K3 --> K4["Warm-up and games"] --> K5["Report or thank-you"]
+    K5 --> K6["Optional contact opt-in<br/>phone to vault only"]
+  end
+  subgraph Site["Supervised site, administrator device"]
+    S1["Criterion consent, read aloud, tap"] --> S2["Questionnaires, performance tasks"]
+    S2 --> S3["pid card links sessions<br/>two people"]
+  end
+  K6 -->|"encrypted batches"| IN
+  S3 --> IN
+  IN{"Consent check at ingest"} -->|"no core consent"| PK["Parked 72 h, dead letter, purged"]
+  IN --> RAW[("kiosk_raw")] --> SC[("scored")] --> CR[("criterion scores")] --> SN[("snapshots, de-identified")]
+  SN --> VE["Validation, gates, signed release pack"]
+  K6 -.-> VA[("Identity vault, separate DB<br/>phone numbers only")]
+  classDef accent fill:#762CB1,stroke:#5F1C93,color:#FFFFFF
+  classDef gold fill:#FAEECD,stroke:#CD9200,color:#1E1B2E
+  class IN accent
+  class VA gold
 ```
+
+The same flow as text:
+
+```text
 Kiosk (offline-first, per-session key)                      Supervised site (administrator device)
   language -> spoken consent (tap) -> picture bands           criterion consent (read aloud, tap)
   -> warm-up -> games -> report or thank-you                  -> questionnaires, performance tasks
@@ -238,7 +264,16 @@ Likelihood (L) and severity (S) on a 1 to 3 scale before mitigation; residual ri
 - Hosting in an India region. No transfer of personal data outside India is planned. Section 16 permits
   transfers except to countries the Government restricts by notification; any future transfer needs a DPIA
   update. **[LEGAL REVIEW]**
-- Processor list: [TBD: cloud provider], [TBD: IVR provider], [TBD: SMS provider, optional].
+- Processor list: [TBD: IVR provider], [TBD: SMS provider, optional], and the hosting processors below.
+- Hosting processors of the production pilot (deployed 2026-10-22, synthetic data only as of 2026-11-04). Each
+  needs a written contract and an entry here before real data arrives. **[LEGAL REVIEW]**
+
+| Processor | Service | Region | Personal data it would hold |
+|---|---|---|---|
+| Supabase | Managed PostgreSQL: research database and the separate identity-vault database, daily backups kept 7 days | `ap-south-1` (Mumbai) | All research data classes; contact data in the vault |
+| Amazon Web Services | EC2 host for the API and worker, SSM Parameter Store for keys, ECR for images | `ap-south-1` (Mumbai) | Data in transit and in process memory; keys |
+| Vercel | Hosting of the staff console and its server-side proxy to the API | [TBD: confirm the function region] | Staff sign-in data and research data in transit to staff browsers |
+| GitHub | Source code and CI | Not applicable | None: CI uses synthetic data only |
 
 ## 10. Personal data breach procedure (section 8(6))
 

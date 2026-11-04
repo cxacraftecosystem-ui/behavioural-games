@@ -60,6 +60,25 @@ Times are from the moment the team becomes aware of the incident (T0).
 | 10. Eradicate and recover | When contained | Remove the cause; restore from clean backups; re-apply tombstones after any restore; verify |
 | 11. Post-incident review | Within 10 working days of closure | Root cause, what worked, what failed, actions with owners; update the DPIA and threat model |
 
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","primaryColor":"#F2E9FE","primaryTextColor":"#1E1B2E","primaryBorderColor":"#9148D2","secondaryColor":"#FAEECD","secondaryTextColor":"#1E1B2E","secondaryBorderColor":"#CD9200","tertiaryColor":"#F3F1FA","tertiaryTextColor":"#1E1B2E","tertiaryBorderColor":"#A7A3BC","mainBkg":"#F2E9FE","nodeBorder":"#9148D2","nodeTextColor":"#1E1B2E","lineColor":"#AA69E9","textColor":"#857F9E","edgeLabelBackground":"#F9F5FF","clusterBkg":"#F9F5FF","clusterBorder":"#D6B6FB","titleColor":"#762CB1","noteBkgColor":"#FAEECD","noteTextColor":"#1E1B2E","noteBorderColor":"#CD9200","actorBkg":"#F2E9FE","actorBorder":"#9148D2","actorTextColor":"#1E1B2E","actorLineColor":"#AA69E9","signalColor":"#AA69E9","signalTextColor":"#857F9E","labelBoxBkgColor":"#F2E9FE","labelBoxBorderColor":"#9148D2","labelTextColor":"#1E1B2E","loopTextColor":"#857F9E","activationBkgColor":"#E7D5FE","activationBorderColor":"#9148D2","sequenceNumberColor":"#FFFFFF","transitionColor":"#AA69E9","transitionLabelColor":"#857F9E","stateLabelColor":"#1E1B2E","stateBkg":"#F2E9FE","compositeBackground":"#F9F5FF","compositeTitleBackground":"#F2E9FE","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F9F5FF","relationColor":"#AA69E9","relationLabelBackground":"#F9F5FF","relationLabelColor":"#1E1B2E"}}}%%
+flowchart LR
+  T0(["T0 · Detect"]) --> TR["Triage<br/>T0 + 1 h"]
+  TR --> SC["Scope<br/>T0 + 4 h"]
+  SC --> CO["Contain<br/>playbooks"]
+  SC --> DE{"Decide<br/>T0 + 6 h"}
+  DE -->|"cyber incident"| CI["CERT-In<br/>within 6 h"]
+  DE -->|"personal data breach"| DPB["Data Protection Board<br/>now, report in 72 h"]
+  DPB --> DP["Data Principals"]
+  DE --> IEC["IEC per SOP"]
+  CO --> ER["Eradicate and recover"]
+  ER --> PIR["Review<br/>10 working days"]
+  classDef accent fill:#762CB1,stroke:#5F1C93,color:#FFFFFF
+  classDef gold fill:#FAEECD,stroke:#CD9200,color:#1E1B2E
+  class DE accent
+  class CI,DPB gold
+```
+
 Every step is recorded in the incident log with time, person and evidence.
 
 ## 5. Playbooks

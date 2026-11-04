@@ -5,6 +5,13 @@ the wave-1 code (commit `1b01cae`) and the target architecture in `docs/IMPLEMEN
 again before Stage 2 (PRV-09 AC: ASVS L2 checklist passes before Stage 2) and after any change to the
 ingestion contract, key handling or kiosk image.
 
+Since this draft (status on 2026-11-04): a production pilot runs on synthetic data behind Caddy on EC2 with
+Supabase Postgres and password sign-in for staff; the CI security pipeline runs CodeQL, OSV-Scanner and
+Dependabot; SF-09 (Electron fuses) is fixed and SF-02, SF-04, SF-07 and SF-14 are mitigated in the pilot. The
+per-finding table is in [scan-findings.md](scan-findings.md#0-status-on-2026-11-04), the pilot's trust boundaries
+in [data-flows.md](data-flows.md#production-pilot-as-deployed-2026-11-04), and the control changes in
+[controls-matrix.md](controls-matrix.md#changes-since-wave-1-2026-11-04).
+
 Read with: [data-flows.md](data-flows.md) (diagrams and trust boundaries),
 [controls-matrix.md](controls-matrix.md) (control IDs `C-nn` used below),
 [scan-findings.md](scan-findings.md) (findings `SF-nn` from the automated scan and code review),

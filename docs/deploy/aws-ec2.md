@@ -6,12 +6,31 @@ region ([supabase.md](supabase.md)). Images are built by GitHub Actions, pushed 
 instance pulls from ECR with its instance role. Every secret
 lives in AWS SSM Parameter Store; none is in this repository, in an image, or in user data.
 
-```
-browser ──▶ Vercel web app ──HTTPS (server-side rewrite /api/v1/*)──▶ Caddy :443 (52-66-109-32.sslip.io, HSTS, size limits, security headers)
-kiosks (device tokens) ─▶   └─▶ api:8000  (FastAPI, ENV=prod, AUTH_MODE=local)
-                              worker      (Postgres job queue)        ──TLS──▶ Supabase session pooler :5432
-                                                                               (research DB + identity vault)
-EC2 instance role ──▶ SSM /shriii/prod/* (SecureString, aws/ssm KMS key) ──▶ /etc/shriii/api.env (root, 0600)
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","primaryColor":"#F2E9FE","primaryTextColor":"#1E1B2E","primaryBorderColor":"#9148D2","secondaryColor":"#FAEECD","secondaryTextColor":"#1E1B2E","secondaryBorderColor":"#CD9200","tertiaryColor":"#F3F1FA","tertiaryTextColor":"#1E1B2E","tertiaryBorderColor":"#A7A3BC","mainBkg":"#F2E9FE","nodeBorder":"#9148D2","nodeTextColor":"#1E1B2E","lineColor":"#AA69E9","textColor":"#857F9E","edgeLabelBackground":"#F9F5FF","clusterBkg":"#F9F5FF","clusterBorder":"#D6B6FB","titleColor":"#762CB1","noteBkgColor":"#FAEECD","noteTextColor":"#1E1B2E","noteBorderColor":"#CD9200","actorBkg":"#F2E9FE","actorBorder":"#9148D2","actorTextColor":"#1E1B2E","actorLineColor":"#AA69E9","signalColor":"#AA69E9","signalTextColor":"#857F9E","labelBoxBkgColor":"#F2E9FE","labelBoxBorderColor":"#9148D2","labelTextColor":"#1E1B2E","loopTextColor":"#857F9E","activationBkgColor":"#E7D5FE","activationBorderColor":"#9148D2","sequenceNumberColor":"#FFFFFF","transitionColor":"#AA69E9","transitionLabelColor":"#857F9E","stateLabelColor":"#1E1B2E","stateBkg":"#F2E9FE","compositeBackground":"#F9F5FF","compositeTitleBackground":"#F2E9FE","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F9F5FF","relationColor":"#AA69E9","relationLabelBackground":"#F9F5FF","relationLabelColor":"#1E1B2E"}}}%%
+flowchart LR
+  BR["Browser"] --> V["Vercel console<br/>behavioural-games.vercel.app"]
+  V -->|"server-side rewrite /api/v1/*"| C
+  K["Kiosks<br/>device tokens"] --> C
+  subgraph EC2["EC2 t3.small · ap-south-1 · 52-66-109-32.sslip.io"]
+    C["Caddy :443<br/>TLS, HSTS, size limits"]
+    A["api :8000<br/>FastAPI, ENV=prod"]
+    W["worker<br/>Postgres job queue"]
+    E[["/etc/shriii/api.env<br/>root 0600"]]
+    C --> A
+    E -.-> A
+    E -.-> W
+  end
+  A -->|TLS| P[("Supabase session pooler :5432<br/>research DB + identity vault")]
+  W -->|TLS| P
+  R["Instance role"] --> S[["SSM /shriii/prod/*<br/>SecureString"]]
+  S -->|"render-env.sh at deploy"| E
+  G["GitHub Actions<br/>OIDC"] -->|"push images"| ECR[("ECR")]
+  ECR -->|"pull on deploy"| A
+  classDef accent fill:#762CB1,stroke:#5F1C93,color:#FFFFFF
+  classDef gold fill:#FAEECD,stroke:#CD9200,color:#1E1B2E
+  class A accent
+  class P,S,ECR gold
 ```
 
 ## What runs where
@@ -127,6 +146,26 @@ run() {   # run one shell command on the instance as root and print its output
 | Synthetic demo data | `run "/opt/shriii/src/infra/ec2/synthetic.sh demo synthetic-demo-<yyyymmdd>"` |
 | Shell | `aws ssm start-session --target i-0fb9646b9ad18744b`, or `ssh -i ~/.ssh/shriii-backend.pem ubuntu@52.66.109.32` from the operator IP |
 
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","primaryColor":"#F2E9FE","primaryTextColor":"#1E1B2E","primaryBorderColor":"#9148D2","secondaryColor":"#FAEECD","secondaryTextColor":"#1E1B2E","secondaryBorderColor":"#CD9200","tertiaryColor":"#F3F1FA","tertiaryTextColor":"#1E1B2E","tertiaryBorderColor":"#A7A3BC","mainBkg":"#F2E9FE","nodeBorder":"#9148D2","nodeTextColor":"#1E1B2E","lineColor":"#AA69E9","textColor":"#857F9E","edgeLabelBackground":"#F9F5FF","clusterBkg":"#F9F5FF","clusterBorder":"#D6B6FB","titleColor":"#762CB1","noteBkgColor":"#FAEECD","noteTextColor":"#1E1B2E","noteBorderColor":"#CD9200","actorBkg":"#F2E9FE","actorBorder":"#9148D2","actorTextColor":"#1E1B2E","actorLineColor":"#AA69E9","signalColor":"#AA69E9","signalTextColor":"#857F9E","labelBoxBkgColor":"#F2E9FE","labelBoxBorderColor":"#9148D2","labelTextColor":"#1E1B2E","loopTextColor":"#857F9E","activationBkgColor":"#E7D5FE","activationBorderColor":"#9148D2","sequenceNumberColor":"#FFFFFF","transitionColor":"#AA69E9","transitionLabelColor":"#857F9E","stateLabelColor":"#1E1B2E","stateBkg":"#F2E9FE","compositeBackground":"#F9F5FF","compositeTitleBackground":"#F2E9FE","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F9F5FF","relationColor":"#AA69E9","relationLabelBackground":"#F9F5FF","relationLabelColor":"#1E1B2E"}}}%%
+sequenceDiagram
+  autonumber
+  participant O as Operator
+  participant H as EC2 host
+  participant S as SSM
+  participant E as ECR
+  participant D as Supabase
+  O->>H: Run Command deploy.sh tag ref
+  H->>H: update infra checkout
+  H->>S: read /shriii/prod/*
+  S-->>H: api.env rendered, root 0600
+  H->>E: pull api and worker images
+  H->>D: one-shot migrate, research and identity
+  H->>H: replace api, worker, caddy
+  H->>H: /healthz and /readyz over HTTPS
+  Note over H: a failed check prints logs and exits non-zero
+```
+
 `deploy.sh [IMAGE_TAG] [GIT_REF]` updates the infra checkout, renders secrets from SSM, pulls the images, runs
 `shriii-api migrate` (research and identity databases) in a one-shot container, replaces the containers, and
 checks `/healthz` and `/readyz` over HTTPS through Caddy with full certificate verification. A failed check
@@ -215,6 +254,12 @@ needs its IP added first.
 Vercel project `behavioural-games` (scope `cxacraftecosystem-8028s-projects`, production
 `https://behavioural-games.vercel.app`, Git-connected: a merge to `main` deploys production).
 
+A push that changes only Markdown, `docs/`, `.github/` or `.claude/` does not build: the `ignoreCommand` in
+`frontend/apps/web/vercel.json` runs `git diff --quiet HEAD^ HEAD` over the whole repository with those paths
+excluded, and Vercel skips the deployment when it finds no other change. Any git error, such as a missing parent
+commit, counts as a change, so the build runs. This needs the clone's `.git`, which is why `.vercelignore` does not
+list it (the Vercel CLI never uploads `.git` anyway).
+
 - **Production uses the live API.** `next.config.ts` rewrites `/api/v1/*`, `/healthz` and `/readyz` to
   `API_PROXY_TARGET` on the server, so the browser only talks to the Vercel origin, bearer tokens never cross
   origins and CORS does not apply. A Vercel build without demo mode fails fast if `API_PROXY_TARGET` is missing
@@ -279,6 +324,18 @@ Screenshots: [`live-research.jpg`](../screenshots/deploy/live-research.jpg),
 [`live-validation.jpg`](../screenshots/deploy/live-validation.jpg),
 [`live-admin-refused.jpg`](../screenshots/deploy/live-admin-refused.jpg),
 [`live-kiosk-language.jpg`](../screenshots/deploy/live-kiosk-language.jpg).
+
+## Live check (2026-11-04)
+
+Read-only checks from the operator machine and over SSM Run Command; nothing was changed.
+
+| Check | Result |
+|---|---|
+| Instance | `i-0fb9646b9ad18744b`, t3.small, running since 2026-11-01 20:44 UTC |
+| Deployed tag (`/etc/shriii/deploy.env`) | `1c2c87c302a9905b50f29b7f7585f4f451db8f76` (PR #9, the newest image in ECR; PR #10 changed only provisioning and docs) |
+| `/healthz`, `/readyz` | 200; `{"database":"ok","identity_database":"ok","migration":"0008"}`, the same through the Vercel origin |
+| Containers | api and worker healthy, caddy 2.10, all up 2 days |
+| Memory (`docker stats`, `free -m`) | api 206 MiB / 700 MiB cap, worker 143 MiB / 600 MiB, caddy 13 MiB / 128 MiB; host 851 MiB used of 1,905, 1,054 MiB available; swap 16 KiB of 2 GiB used; load average 0.03 |
 
 ## Rotating secrets
 
