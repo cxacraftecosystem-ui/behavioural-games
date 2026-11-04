@@ -3,5 +3,6 @@
   "framework": "nextjs",
   "installCommand": "cd ../../.. && npx --yes pnpm@12.10.1 install --frozen-lockfile --filter web...",
   "buildCommand": "NEXT_PUBLIC_DEMO_MODE=${NEXT_PUBLIC_DEMO_MODE:-1} node node_modules/next/dist/bin/next build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ':(top)' ':(top,exclude)*.md' ':(top,exclude)docs' ':(top,exclude).github' ':(top,exclude).claude'"
 }

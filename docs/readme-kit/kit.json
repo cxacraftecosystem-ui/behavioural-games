@@ -1,0 +1,260 @@
+{
+  "hero": {
+    "eyebrow": "SHRIII · Research instrument",
+    "name": "Kiosk Behavioural Games",
+    "titleWrap": 17,
+    "tagline": "Touch-first games at a golden-hour village fair whose play becomes candidate indicators for 17 constructs, validated before anything reaches a player.",
+    "chips": [
+      "PixiJS + React",
+      "Electron kiosk",
+      "FastAPI",
+      "Postgres",
+      "Python + R"
+    ],
+    "motifCaption": "play · measure · validate",
+    "label": "Kiosk Behavioural Games: touch-first kiosk games whose play becomes candidate indicators for 17 constructs, validated before anything reaches a player"
+  },
+  "cards": {
+    "label": "What the system does: two pathways, voice-optional play, an encrypted offline outbox, a versioned scoring dictionary, a validation workbench and privacy by design",
+    "columns": 3,
+    "items": [
+      {
+        "icon": "sparkles",
+        "tag": "Play",
+        "title": "Two pathways, 15 minutes",
+        "body": "Pathway A: three story episodes at the fair. Pathway B: a carousel of micro-games. Both end inside 900 s."
+      },
+      {
+        "icon": "mic",
+        "tag": "Voice",
+        "title": "Touch always works",
+        "body": "No reading, no keyboard. Voice is optional and closed-vocabulary, every prompt is mirrored by an icon."
+      },
+      {
+        "icon": "wifi-off",
+        "tag": "Offline",
+        "title": "Sealed at the kiosk",
+        "body": "Events are encrypted per session in a SQLite outbox, sealed to the backend key and uploaded idempotently."
+      },
+      {
+        "icon": "flask-conical",
+        "tag": "Measure",
+        "title": "Science in YAML",
+        "body": "Indicators, hypotheses and gates live in a versioned dictionary. Code never holds a threshold."
+      },
+      {
+        "icon": "chart-line",
+        "tag": "Validate",
+        "title": "A validation workbench",
+        "body": "Reliability, MTMM validity, invariance, DIF and norming in Python and R, on synthetic data until the pilot."
+      },
+      {
+        "icon": "shield-check",
+        "tag": "Privacy",
+        "title": "Fail closed, adults only",
+        "body": "Consent by tap, no audio kept, no camera, crypto-shredding erasure. Reports stay off until the gates pass."
+      }
+    ]
+  },
+  "cards:games": {
+    "label": "The nine Pathway B micro-games: Balloon Pump, Don't-Tap, Card Sort, Tower, Share-the-Pot, Private Dice, Wait-or-Now, Steady Hands and Four Stalls",
+    "columns": 3,
+    "items": [
+      {
+        "icon": "zap",
+        "tag": "MG-01",
+        "title": "Balloon Pump",
+        "body": "Pump to grow the jar, bank before it bursts. Risk preference and decisiveness."
+      },
+      {
+        "icon": "gauge",
+        "tag": "MG-02",
+        "title": "Don't-Tap",
+        "body": "Go/no-go with a pressure block. Self-control and composure."
+      },
+      {
+        "icon": "layers",
+        "tag": "MG-03",
+        "title": "Card Sort",
+        "body": "An unannounced rule switch and a reversal. Adaptability."
+      },
+      {
+        "icon": "box",
+        "tag": "MG-04",
+        "title": "Tower",
+        "body": "Move pots between baskets, two puzzles unsolvable. Planning and persistence."
+      },
+      {
+        "icon": "users",
+        "tag": "MG-05",
+        "title": "Share-the-Pot",
+        "body": "Eight public-goods rounds with scripted partners. Teamwork."
+      },
+      {
+        "icon": "lock",
+        "tag": "MG-06",
+        "title": "Private Dice",
+        "body": "A cupped-hand report, true roll never logged. Integrity at group level only."
+      },
+      {
+        "icon": "compass",
+        "tag": "MG-07",
+        "title": "Wait-or-Now",
+        "body": "Sun-and-moon delays and hold-to-earn effort. Self-control and persistence."
+      },
+      {
+        "icon": "activity",
+        "tag": "MG-08",
+        "title": "Steady Hands",
+        "body": "Free and held responding with distractors. Restraint and composure."
+      },
+      {
+        "icon": "map",
+        "tag": "MG-09",
+        "title": "Four Stalls",
+        "body": "Four vendors with seeded payoffs, repeated probes. Decisiveness and risk."
+      }
+    ]
+  },
+  "pipeline": {
+    "label": "How a session becomes evidence: play, seal, ingest, score, validate, report",
+    "stages": [
+      {
+        "icon": "sparkles",
+        "title": "Play",
+        "sub": "Touch-first games at the kiosk"
+      },
+      {
+        "icon": "lock",
+        "title": "Seal",
+        "sub": "Per-session key, offline outbox"
+      },
+      {
+        "icon": "server",
+        "title": "Ingest",
+        "sub": "Idempotent batches, consent at ingest"
+      },
+      {
+        "icon": "chart-column",
+        "title": "Score",
+        "sub": "Versioned indicator dictionary"
+      },
+      {
+        "icon": "badge-check",
+        "title": "Validate",
+        "sub": "Gates in YAML, fail closed"
+      },
+      {
+        "icon": "file-text",
+        "title": "Report",
+        "sub": "Banded, strengths-framed, gated"
+      }
+    ]
+  },
+  "stats": {
+    "label": "At a glance: 17 constructs, two pathways, a 15-minute session cap and five data layers that never mix",
+    "tiles": [
+      {
+        "icon": "brain",
+        "kicker": "Constructs",
+        "value": "17",
+        "label": "Candidate indicators measure"
+      },
+      {
+        "icon": "workflow",
+        "kicker": "Pathways",
+        "value": "2",
+        "label": "Story episodes or micro-games"
+      },
+      {
+        "icon": "gauge",
+        "kicker": "Session",
+        "value": "15",
+        "unit": "min",
+        "label": "Hard cap, onboarding to farewell"
+      },
+      {
+        "icon": "layers",
+        "kicker": "Layers",
+        "value": "5",
+        "label": "Data layers, never mixed"
+      }
+    ]
+  },
+  "timeline": {
+    "label": "Build so far: plan and wave 1, wave 2, the live pilot, hardening, the t3.small host, then Stage 1 in the field",
+    "items": [
+      {
+        "date": "21 Oct",
+        "title": "Plan + wave 1",
+        "sub": "Contracts, engine, API"
+      },
+      {
+        "date": "22 Oct",
+        "title": "Wave 2",
+        "sub": "Both pathways end to end"
+      },
+      {
+        "date": "22 Oct",
+        "title": "Live pilot",
+        "sub": "Vercel, EC2, Supabase"
+      },
+      {
+        "date": "1 Nov",
+        "title": "Hardening",
+        "sub": "Dependabot, pinned actions"
+      },
+      {
+        "date": "2 Nov",
+        "title": "Admin + t3.small",
+        "sub": "Migration 0008, caps",
+        "now": true
+      },
+      {
+        "date": "Next",
+        "title": "Stage 1 field",
+        "sub": "Recordings, kiosk SKU"
+      }
+    ]
+  },
+  "timeline:stages": {
+    "label": "The research programme: Stage 1 think-aloud next, then the Stage 2 pilot, Stage 3 retest, Stage 4 fairness and Stage 5 outcomes and norms",
+    "items": [
+      {
+        "date": "Stage 1",
+        "title": "Think-aloud",
+        "sub": "Next: 30 to 40 per pathway",
+        "now": true
+      },
+      {
+        "date": "Stage 2",
+        "title": "Pilot",
+        "sub": "450 per language, two arms"
+      },
+      {
+        "date": "Stage 3",
+        "title": "Retest",
+        "sub": "14 to 28 days later"
+      },
+      {
+        "date": "Stage 4",
+        "title": "Fairness",
+        "sub": "Invariance and DIF"
+      },
+      {
+        "date": "Stage 5",
+        "title": "Outcomes",
+        "sub": "Validity and norms"
+      }
+    ]
+  },
+  "divider": {
+    "label": "Section divider"
+  },
+  "footer": {
+    "title": "A measurement instrument first, a game second.",
+    "sub": "SHRIII · Kiosk Behavioural Games",
+    "label": "A measurement instrument first, a game second. SHRIII, Kiosk Behavioural Games."
+  },
+  "icons": "all"
+}

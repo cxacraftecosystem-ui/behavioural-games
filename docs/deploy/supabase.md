@@ -11,7 +11,7 @@ in the repository; every credential lives in AWS SSM Parameter Store.
 | Project | `shriii-kiosk-games`, ref `qcxfjelfjqdvxcjeitiv` |
 | Organisation | `pifvglrcqwrizapmooik` (the other projects in this org are unrelated and must not be touched) |
 | Region | `ap-south-1` (Mumbai), for DPDP data residency |
-| Engine | PostgreSQL 17 (Supabase does not offer 18 yet; see [PostgreSQL 17 compatibility](#postgresql-17-compatibility)) |
+| Engine | PostgreSQL 17.11 (Supabase does not offer 18 yet; see [PostgreSQL 17 compatibility](#postgresql-17-compatibility)) |
 | Plan | organisation on the **Pro plan**; project disk **8 GB** (see [Plan and disk](#plan-and-disk)) |
 
 ## Plan and disk
@@ -32,6 +32,29 @@ related has not been established, and no Supabase explanation has been obtained.
 - budget about 3 KB per raw event including indexes.
 
 ## Databases and roles
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif","fontSize":"15px","primaryColor":"#F2E9FE","primaryTextColor":"#1E1B2E","primaryBorderColor":"#9148D2","secondaryColor":"#FAEECD","secondaryTextColor":"#1E1B2E","secondaryBorderColor":"#CD9200","tertiaryColor":"#F3F1FA","tertiaryTextColor":"#1E1B2E","tertiaryBorderColor":"#A7A3BC","mainBkg":"#F2E9FE","nodeBorder":"#9148D2","nodeTextColor":"#1E1B2E","lineColor":"#AA69E9","textColor":"#857F9E","edgeLabelBackground":"#F9F5FF","clusterBkg":"#F9F5FF","clusterBorder":"#D6B6FB","titleColor":"#762CB1","noteBkgColor":"#FAEECD","noteTextColor":"#1E1B2E","noteBorderColor":"#CD9200","actorBkg":"#F2E9FE","actorBorder":"#9148D2","actorTextColor":"#1E1B2E","actorLineColor":"#AA69E9","signalColor":"#AA69E9","signalTextColor":"#857F9E","labelBoxBkgColor":"#F2E9FE","labelBoxBorderColor":"#9148D2","labelTextColor":"#1E1B2E","loopTextColor":"#857F9E","activationBkgColor":"#E7D5FE","activationBorderColor":"#9148D2","sequenceNumberColor":"#FFFFFF","transitionColor":"#AA69E9","transitionLabelColor":"#857F9E","stateLabelColor":"#1E1B2E","stateBkg":"#F2E9FE","compositeBackground":"#F9F5FF","compositeTitleBackground":"#F2E9FE","attributeBackgroundColorOdd":"#FFFFFF","attributeBackgroundColorEven":"#F9F5FF","relationColor":"#AA69E9","relationLabelBackground":"#F9F5FF","relationLabelColor":"#1E1B2E"}}}%%
+flowchart LR
+  subgraph Project["Supabase project shriii-kiosk-games · ap-south-1"]
+    subgraph PG["database postgres"]
+      RS[("11 research schemas<br/>kiosk_raw ... ops")]
+      PUB[("public.alembic_version<br/>RLS, no policy")]
+    end
+    subgraph ID["database shriii_identity"]
+      IV[("identity_vault")]
+    end
+    POOL["Supavisor session pooler<br/>:5432, TLS"]
+  end
+  API["api + worker<br/>EC2 52.66.109.32"] --> POOL
+  POOL -->|"shriii_api"| RS
+  POOL -->|"shriii_identity"| IV
+  REST["Data API, PostgREST"] -.->|"PGRST106, 42501"| RS
+  classDef accent fill:#762CB1,stroke:#5F1C93,color:#FFFFFF
+  classDef gold fill:#FAEECD,stroke:#CD9200,color:#1E1B2E
+  class POOL accent
+  class REST gold
+```
 
 The identity vault is a **separate database in the same project** with its own login role and password. A
 second project was not needed: the research role cannot connect to the vault database, and the vault role has
@@ -84,12 +107,16 @@ Docker involved.
 export MSYS_NO_PATHCONV=1   # Git Bash on Windows only
 export DATABASE_URL=$(aws ssm get-parameter --name /shriii/prod/DATABASE_URL --with-decryption --query Parameter.Value --output text)
 export IDENTITY_DATABASE_URL=$(aws ssm get-parameter --name /shriii/prod/IDENTITY_DATABASE_URL --with-decryption --query Parameter.Value --output text)
-uv run shriii-api migrate     # research to head (0007), identity to head (i0002)
+uv run shriii-api migrate     # research to head (0008), identity to head (i0002)
 uv run shriii-api seed        # instruments, dictionary, games, content versions
 ```
 
 The demo study (`demo-s2-pilot`) was seeded with `seed_demo_study`. `seed --demo` does the same and also
 registers a dev kiosk, but only when `ENV` is dev or test, so do not run it with a dev `ENV` against production.
+
+Status on 2026-11-04 (read-only check from the API container): research at `0008` (the additive admin-endpoint
+migration from PR #9, applied by the `1c2c87c` deploy), identity at `i0002`, PostgreSQL 17.11, 108 tables across
+the 11 research schemas, database size 248 MB.
 
 Status on 2026-10-22 (later): research at `0007` after the release `68ffab7` deploy, database size 247 MB.
 Earlier status on 2026-10-22: research at `0005` (92 tables in 11 schemas, the 9 initial event partitions included, plus `public.alembic_version`), identity at
@@ -124,12 +151,13 @@ slip in. The rest of CI stays on 18.
 
 ## Operations notes
 
-- **Backups:** daily backups come with the Pro plan. Turn on PITR (a paid add-on) before real participant data
-  arrives.
+- **Backups:** daily backups come with the Pro plan and are kept for 7 days, inside the 14-day backup limit of the
+  [retention policy](../governance/retention-and-deletion-policy.md). Turn on PITR (a paid add-on) before real
+  participant data arrives.
 - **Event partitions:** migration 0002 creates `kiosk_raw.events_pYYYYMMDD` for yesterday to day +7. The
   worker must keep creating them.
-- **Network restrictions:** after the EC2 Elastic IP is fixed, restrict database access to it (and the
-  operator IP) under Supabase network restrictions.
+- **Network restrictions:** in place. The database and pooler accept only the EC2 Elastic IP `52.66.109.32/32`
+  and the operator IP; IPv6 is closed ([aws-ec2.md](aws-ec2.md#database-network-access)).
 - **Least privilege at runtime (follow-up):** the API currently connects as the schema owner `shriii_api`.
   The append-only guarantees hold because they are enforced by triggers, not grants. A separate runtime login
   that is a member of `shriii_app` would tighten this further.

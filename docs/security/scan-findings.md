@@ -5,6 +5,33 @@ engine, backend API, psychometrics engine). Raw tool output is in [`scans/`](sca
 threat model ([threat-model.md](threat-model.md)) and the controls matrix
 ([controls-matrix.md](controls-matrix.md)).
 
+## 0. Status on 2026-11-04
+
+Checked against `main` at `b142b4c` and the production pilot. The sections below keep the original wave-1 text.
+
+| Finding | Status | Where it stands |
+|---|---|---|
+| SF-01 Ingestion misses ING-02 | Open | One API process; the patches in `tools/loadtest/proposals/` are not applied. The nightly load test still measures the gap (it reports the p95, `enforce_p95` is off); exactly-once storage still passes |
+| SF-02 Body limit after read | Mitigated in the pilot | Caddy refuses bodies over 2 MB before the API reads them; gzip transport and compress-before-seal are not built |
+| SF-03 Report token in audit and access logs | Open | `audit.py` still stores `request.url.path` |
+| SF-04 Vault falls back to the research DB | Mitigated in the pilot | Production sets `IDENTITY_DATABASE_URL` to the separate `shriii_identity` database with its own login; the fallback in `settings.py` remains |
+| SF-05 Leaf-only scrub | Open | `payload_ext` still drops only unknown keys whose own name is forbidden |
+| SF-06 Static admin PIN | Open | KSK-13 not built; the development PIN panel is excluded from production builds |
+| SF-07 Keys in environment variables | Mitigated in the pilot | Keys live in SSM SecureString (KMS `aws/ssm`) and reach the containers as environment variables; per-purpose KMS keys and a separate DLQ key are not built |
+| SF-08 JWT hardening | Open | Production uses `AUTH_MODE=local` (HS256, 8 h); no MFA, no `amr`/`acr` check |
+| SF-09 Electron fuses | Fixed | `electron-builder.yml` sets `electronFuses` with embedded ASAR integrity validation and only-load-from-ASAR |
+| SF-10 Docs and headers | Fixed (headers), open (docs) | Caddy sends HSTS, CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` and removes `Server`; `/docs` and `/openapi.json` are still public |
+| SF-11 Unbounded research queries | Open | `/features/matrix` is not paginated; no `statement_timeout` |
+| SF-12 Export justification | Open | Not requested or recorded |
+| SF-13 Audit row after commit | Open | Audit still writes in its own transaction |
+| SF-14 No rate limiting | Mitigated in the pilot | Staff sign-in locks an account for 15 minutes after five failures; no per-IP or per-device rate limit |
+| SF-15 Browser build not field-ready | Informational | Unchanged by design; registered kiosks run the Electron runtime with the SQLite outbox and sealed chunks |
+| SF-16 Replayed batch statuses | Informational | Unchanged |
+
+New since wave 1: OSV-Scanner 2.7 found six npm advisories in build tooling and brotli 1.2.0 (GHSA-9v8h-qqgm-4m35)
+in the load-test client. All are fixed by upgrades or pnpm overrides except `minimatch` 3.1.5, which has a
+version-scoped exception in `osv-scanner.toml` that expires on 31 December 2026 (PR #7).
+
 ## 1. Tools run
 
 | Tool | Version | Scope | Command (abridged) | Result |

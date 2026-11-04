@@ -45,6 +45,10 @@
 - Database backups and session-key backups kept for 14 days or less.
 - Access by role and study scope with MFA ([access control policy](access-control-policy.md)).
 - Kiosk data is encrypted per session until upload; offline capacity 30 days.
+- Production pilot (2026-11-04, synthetic data only): research database and identity vault on Supabase in Mumbai
+  (separate databases, separate logins, network access limited to the API host), daily backups kept 7 days; API
+  and worker on AWS EC2 in Mumbai with keys in SSM Parameter Store. Object storage and KMS-held keys are not
+  used yet ([deploy/supabase.md](../deploy/supabase.md), [deploy/aws-ec2.md](../deploy/aws-ec2.md)).
 
 ## 5. Quality assurance
 

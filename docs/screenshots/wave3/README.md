@@ -6,7 +6,7 @@
 
 ## How the frames were made
 
-- **Full sessions.** Pathway A and Pathway B were played on a bridge build of `apps/kiosk`
+- **Full sessions.** Pathway A and Pathway B were played on a bridge build of `apps/kiosk` (now `frontend/apps/kiosk`)
   (`VITE_E2E_BRIDGE=true`, served with `vite preview`). The bot was the `e2e/full-session.mjs` logic,
   with extra screenshots at each state and module change. Chromium ran on the local GPU (ANGLE D3D11).
   Both sessions passed the bot's checks: the session completed, every event was valid, and seq was
